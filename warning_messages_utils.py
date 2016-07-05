@@ -7,7 +7,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
     # Enter warning messages to the message dictionary
     # warn - if nothing passed falls back to DEFAULT
     # a list of strings can be passed and concatenated in obj_name too
-    # is_mat a switch to change to materials or textures for obj_name('MAT','TEX', None)
+    # is_mat a switch to change to materials or textures for obj_name('MAT','TEX', 'FILE', None)
     # fake - optional string that can be passed
     # MAX_COUNT - max members of an list to be displayed
     obj_name = ""
@@ -19,6 +19,8 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             gramma_s, gramma_p = " - Material has ", " - Materials have "
         elif is_mat in {'TEX'}:
             gramma_s, gramma_p = " - Texture has ", " - Textures have "
+        elif is_mat in {'FILE'}:
+            gramma_s, gramma_p = " - File ", " - Files "
 
     # pass the show_warnings bool to enable/disable them
     addon = bpy.context.user_preferences.addons[MAT_SPEC_NAME]
@@ -70,6 +72,8 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'CYC_SW_NODES_ON': "Switching back to Cycles, Use Nodes enabled",
             'TEX_RENAME_F': obj_name + "no Images assigned, skipping",
             'NO_TEX_RENAME': "No Textures in Data, nothing to rename",
+            'TEX_D_T_ERROR': obj_name + "or Directory without writing privileges",
+            'TEX_PATH_ERROR': obj_name + "Missing Path(s)",
             }
 
         operator.report({'INFO'}, message[warn])

@@ -25,7 +25,7 @@
 bl_info = {
     "name": "Convert Materials to Cycles",
     "author": "Silvio Falcinelli, updates by community",
-    "version": (0, 11, 1),
+    "version": (0, 11, 2),
     "blender": (2, 71, 0),
     "location": "Properties > Material > Convert to Cycles",
     "description": "Convert non-nodes materials to Cycles",
@@ -44,6 +44,9 @@ from math import exp
 import os
 from os import path, access
 from .warning_messages_utils import warning_messages
+
+# switch for operator's function called after AutoNodeInitiate
+CHECK_AUTONODE = False
 
 
 def AutoNodeOff(operator=None):
@@ -67,9 +70,11 @@ def CheckImagePath(operator=None):
                     continue
                 else:
                     print("os.access(os.path.(path) not passed!!!", os.access(path, os.W_OK))
+                    warning_messages(operator, 'TEX_D_T_ERROR', image.name, "FILE")
                     return False
             else:
                 print("os.path.exists(path) not passed!!!", os.path.exists(path))
+                warning_messages(operator, 'TEX_PATH_ERROR', image.name, "FILE")
                 return False
         return False
     print("CheckImagePath returns True!!!")
@@ -152,6 +157,15 @@ def BakingText(tex, mode):
 
     # print('INFO : end Bake ' + img.filepath_raw )
     print('________________________________________')
+
+
+def AutoNodeInitiate(active=False, operator=None):
+    # Checks for writing privileges by calling CheckImagePath
+    # if it passes procedes with calling AutoNode
+
+    if CheckImagePath(operator):
+        CHECK_AUTONODE = True
+        AutoNode(active, operator)
 
 
 def AutoNode(active=False, operator=None):
@@ -478,10 +492,12 @@ class mlrefresh(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        AutoNode(False, self)
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
-        bpy.ops.object.editmode_toggle()
+        AutoNodeInitiate(False, self)
+
+        if CHECK_AUTONODE is True:
+            bpy.ops.object.editmode_toggle()
+            bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+            bpy.ops.object.editmode_toggle()
 
         return {'FINISHED'}
 
@@ -498,10 +514,12 @@ class mlrefresh_active(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        AutoNode(True)
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
-        bpy.ops.object.editmode_toggle()
+        AutoNodeInitiate(True, self)
+
+        if CHECK_AUTONODE is True:
+            bpy.ops.object.editmode_toggle()
+            bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+            bpy.ops.object.editmode_toggle()
         return {'FINISHED'}
 
 
