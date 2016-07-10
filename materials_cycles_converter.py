@@ -29,7 +29,7 @@ bl_info = {
     "blender": (2, 71, 0),
     "location": "Properties > Material > Convert to Cycles",
     "description": "Convert non-nodes materials to Cycles",
-    "warning": "beta",
+    "warning": "",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
                 "Scripts/Material/Blender_Cycles_Materials_Converter",
     "category": "Material"}
@@ -505,7 +505,7 @@ class mlrefresh(bpy.types.Operator):
 class mlrefresh_active(bpy.types.Operator):
     bl_idname = "ml.refresh_active"
     bl_label = "Convert All Materials From Active Object"
-    bl_description = "Convert all materials from actice object from non-nodes to Cycles"
+    bl_description = "Convert all Active Object's Materials \n from non-nodes to Cycles"
     bl_register = True
     bl_undo = True
 

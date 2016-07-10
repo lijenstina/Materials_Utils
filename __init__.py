@@ -16,7 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 #  (c) 2015 meta-androcto, parts based on work by Saidenka, Materials Utils by MichaleW,
-#           lijenstina, codemanx, Materials Conversion: Silvio Falcinelli, johnzero7#
+#           lijenstina, codemanx, Materials Conversion: Silvio Falcinelli, johnzero7#,
+#           link to base names: Sybren, texture renamer:
 
 bl_info = {
     "name": "Materials Specials",
@@ -108,7 +109,6 @@ def replace_material(m1, m2, all_objects=False, update_selection=False, operator
 
     if matorg != matrep and None not in (matorg, matrep):
         # store active object
-        # scn = bpy.context.scene
 
         if all_objects:
             objs = bpy.data.objects
@@ -1123,7 +1123,7 @@ class mlrestore(bpy.types.Operator):
 
 class SetTransparentBackSide(bpy.types.Operator):
     bl_idname = "material.set_transparent_back_side"
-    bl_label = "Transparent back (BI)."
+    bl_label = "Transparent back (BI)"
     bl_description = "Creates BI nodes transparently mesh background"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -1212,30 +1212,78 @@ class MoveMaterialSlotBottom(bpy.types.Operator):
 
 class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
     bl_idname = "material.link_to_base_names"
-    bl_label = "Merge .001, .002 All Objects"
-    bl_description = ("Replace .001, .002 slots with Original Material/Name"
-                      "on All Materials/Objects")
+    bl_label = "Merge Base Names"
+    bl_description = ("Replace .001, .002 slots with Original \n"
+                      "Material/Name on All Materials/Objects")
     bl_options = {'REGISTER', 'UNDO'}
 
-    def execute(self, context):
-        for ob in context.scene.objects:
-            for slot in ob.material_slots:
-                self.fixup_slot(slot)
+    mat_keep = StringProperty(name="Material to keep",
+                              default="Material")
+    is_auto = BoolProperty(name="Auto Rename/Replace",
+                           description=("Automatically Replace names "
+                                        "by stripping numerical suffix"),
+                           default=False)
+    mat_error = []          # collect mat for warning messages
+    is_not_undo = False     # prevent drawing props on undo
 
-        return {'FINISHED'}
+    def draw(self, context):
+        layout = self.layout
+        if self.is_not_undo is True:
+            boxee = layout.box()
+            boxee.prop_search(self, "mat_keep", bpy.data, "materials")
+            boxee.enabled = (True if self.is_auto is False else False)
+            layout.separator()
+
+            boxs = layout.box()
+            boxs.prop(self, "is_auto", text="Auto Rename/Replace", icon="SYNTAX_ON")
+            print("is_auto is :", self.is_auto)
+        else:
+            layout.label(text="**Only Undo is available**", icon="INFO")
+
+    def invoke(self, context, event):
+        self.is_not_undo = True
+        return context.window_manager.invoke_props_dialog(self)
+
+    def replace_name(self):
+        # use the chosen material as a base one
+        for mat in bpy.data.materials:
+            name = mat.name
+            if name == self.mat_keep:
+                try:
+                    base, suffix = name.rsplit('.', 1)
+                    num = int(suffix, 10)
+                    self.mat_keep = base
+                    mat.name = self.mat_keep
+                    print("self.mat_keep in replace_name is ", self.mat_keep, name)
+                    return
+                except ValueError:
+                    self.mat_error.append(mat.name)
+                    return
 
     def split_name(self, material):
         name = material.name
 
         if '.' not in name:
+            print("if '.' not in name:", name)
             return name, None
 
         base, suffix = name.rsplit('.', 1)
+
         try:
             num = int(suffix, 10)
         except ValueError:
             # Not a numeric suffix
+            self.mat_error.append(mat.name)
+            print("except ValueError: for num = int(suffix, 10)", suffix)
             return name, None
+
+        if self.is_auto is False:
+            if base == self.mat_keep:
+                print("if base == self.mat_keep:", self.mat_keep)
+                return base, suffix
+            else:
+                print("if base == self.mat_keep: else hit")
+                return name, None
 
         return base, suffix
 
@@ -1244,6 +1292,9 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
             return
 
         base, suffix = self.split_name(slot.material)
+
+        print("base, suffix are :", base, suffix)
+
         if suffix is None:
             return
 
@@ -1254,6 +1305,30 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
             return
 
         slot.material = base_mat
+
+    def check(self, context):
+        if self.is_not_undo is True:
+            return True
+
+    def execute(self, context):
+        if self.is_auto is False:
+            self.replace_name()
+        #print("self.is_auto is ", self.is_auto)
+        print("self.mat_keep is ", self.mat_keep)
+
+        for ob in context.scene.objects:
+            for slot in ob.material_slots:
+                self.fixup_slot(slot)
+
+        if use_cleanmat_slots():
+            cleanmatslots()
+
+        #if mat_error:
+            #warning_messages(self, '')
+
+        self.is_not_undo = False
+
+        return {'FINISHED'}
 
 
 class VIEW3D_OT_material_remove(bpy.types.Operator):
@@ -1365,6 +1440,7 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
 
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
+        layout.operator("material.link_to_base_names", icon="INFO")
 
         if c_render_engine("Cycles"):
             # Cycles

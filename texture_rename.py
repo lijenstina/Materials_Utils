@@ -31,6 +31,8 @@ class SimpleOp(bpy.types.Operator):
 
             boxs = layout.box()
             boxs.prop_search(self, "named", bpy.data, "textures")
+        else:
+            layout.label(text="**Only Undo is available**", icon="INFO")
 
     def invoke(self, context, event):
         self.is_not_undo = True

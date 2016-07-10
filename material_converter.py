@@ -98,7 +98,7 @@ def addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, prevTexNode, newTexNode, n
 
 
 def makeBiNodes(cmat):
-    '''Create Blender Internal Material Nodes'''
+    # Create Blender Internal Material Nodes
     TreeNodes = cmat.node_tree
     links = TreeNodes.links
 
@@ -742,7 +742,7 @@ class material_convert_selected(bpy.types.Operator):
 class material_restore_bi(bpy.types.Operator):
     bl_idname = "xps_tools.restore_bi_materials_all"
     bl_label = "Restore Blender Internal Materials"
-    bl_description = "Switch to Blender Internal Render Nodes On"
+    bl_description = " Switch to Blender Internal Render \n Nodes On"
     bl_register = True
     bl_undo = True
 
