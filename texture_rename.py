@@ -44,7 +44,7 @@ class SimpleOp(bpy.types.Operator):
 
         for texture in bpy.data.textures:
             try:
-                if texture and self.named in texture.name and texture.type == "IMAGE":
+                if texture and self.named in texture.name and texture.type in {"IMAGE"}:
                     tex_count += 1
                     textname = ""
                     img = (bpy.data.textures[texture.name].image if bpy.data.textures[texture.name] else None)

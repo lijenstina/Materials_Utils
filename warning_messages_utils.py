@@ -74,6 +74,8 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'NO_TEX_RENAME': "No Textures in Data, nothing to rename",
             'TEX_D_T_ERROR': obj_name + "or Directory without writing privileges",
             'TEX_PATH_ERROR': obj_name + "Missing Path(s)",
+            'MAT_LINK_ERROR': obj_name + "not be renamed or set as Base(s)",
+            'MAT_LINK_NO_NAME': "No Base name given, No changes applied",
             }
 
         operator.report({'INFO'}, message[warn])

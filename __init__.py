@@ -17,12 +17,12 @@
 # ##### END GPL LICENSE BLOCK #####
 #  (c) 2015 meta-androcto, parts based on work by Saidenka, Materials Utils by MichaleW,
 #           lijenstina, codemanx, Materials Conversion: Silvio Falcinelli, johnzero7#,
-#           link to base names: Sybren, texture renamer:
+#           link to base names: Sybren, texture renamer: Yadoob
 
 bl_info = {
     "name": "Materials Specials",
     "author": "Community",
-    "version": (0, 2),
+    "version": (0, 2, 1),
     "blender": (2, 75, 0),
     "location": "Materials Specials Menu/Shift Q",
     "description": "Extended Specials: Materials Properties",
@@ -163,7 +163,7 @@ def select_material_by_name(find_mat_name):
     if not editmode:
         objs = bpy.data.objects
         for ob in objs:
-            if ob.type in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
+            if included_object_types(ob):
                 ms = ob.material_slots
                 for m in ms:
                     if m.material == find_mat:
@@ -714,6 +714,7 @@ def CyclesNodeOn(operator=None):
         warning_messages(operator, 'CYC_SW_NODES_ON')
 
 
+# -----------------------------------------------------------------------------
 # Operator Classes #
 
 class VIEW3D_OT_show_mat_preview(bpy.types.Operator):
@@ -1105,12 +1106,11 @@ class VIEW3D_OT_fake_user_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class mlrestore(bpy.types.Operator):
+class MATERIAL_OT_mlrestore(bpy.types.Operator):
     bl_idname = "cycles.restore"
     bl_label = "Restore Cycles"
     bl_description = "Switch Back to Cycles Nodes"
-    bl_register = True
-    bl_undo = True
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -1121,7 +1121,7 @@ class mlrestore(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class SetTransparentBackSide(bpy.types.Operator):
+class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
     bl_idname = "material.set_transparent_back_side"
     bl_label = "Transparent back (BI)"
     bl_description = "Creates BI nodes transparently mesh background"
@@ -1149,6 +1149,7 @@ class SetTransparentBackSide(bpy.types.Operator):
             for node in mat.node_tree.nodes:
                 if (node):
                     mat.node_tree.nodes.remove(node)
+
         mat.use_transparency = True
         node_mat = mat.node_tree.nodes.new('ShaderNodeMaterial')
         node_out = mat.node_tree.nodes.new('ShaderNodeOutput')
@@ -1158,10 +1159,11 @@ class SetTransparentBackSide(bpy.types.Operator):
         node_geo.location = [node_geo.location[0] + 150, node_geo.location[1] - 150]
         mat.node_tree.links.new(node_mat.outputs[0], node_out.inputs[0])
         mat.node_tree.links.new(node_geo.outputs[8], node_out.inputs[1])
+
         return {'FINISHED'}
 
 
-class MoveMaterialSlotTop(bpy.types.Operator):
+class MATERIAL_OT_move_slot_top(bpy.types.Operator):
     bl_idname = "material.move_material_slot_top"
     bl_label = "Slot to the top"
     bl_description = "Move the active material slots on top"
@@ -1180,12 +1182,14 @@ class MoveMaterialSlotTop(bpy.types.Operator):
 
     def execute(self, context):
         activeObj = context.active_object
+
         for i in range(activeObj.active_material_index):
             bpy.ops.object.material_slot_move(direction='UP')
+
         return {'FINISHED'}
 
 
-class MoveMaterialSlotBottom(bpy.types.Operator):
+class MATERIAL_OT_move_slot_bottom(bpy.types.Operator):
     bl_idname = "material.move_material_slot_bottom"
     bl_label = "Slots to the bottom"
     bl_description = "Move the active material slot at the bottom"
@@ -1205,8 +1209,10 @@ class MoveMaterialSlotBottom(bpy.types.Operator):
     def execute(self, context):
         activeObj = context.active_object
         lastSlotIndex = len(activeObj.material_slots) - 1
+
         for i in range(lastSlotIndex - activeObj.active_material_index):
             bpy.ops.object.material_slot_move(direction='DOWN')
+
         return {'FINISHED'}
 
 
@@ -1218,13 +1224,14 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     mat_keep = StringProperty(name="Material to keep",
-                              default="Material")
+                              default="")
     is_auto = BoolProperty(name="Auto Rename/Replace",
                            description=("Automatically Replace names "
                                         "by stripping numerical suffix"),
                            default=False)
     mat_error = []          # collect mat for warning messages
     is_not_undo = False     # prevent drawing props on undo
+    check_no_name = True    # check if no name is passed
 
     def draw(self, context):
         layout = self.layout
@@ -1236,7 +1243,6 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
 
             boxs = layout.box()
             boxs.prop(self, "is_auto", text="Auto Rename/Replace", icon="SYNTAX_ON")
-            print("is_auto is :", self.is_auto)
         else:
             layout.label(text="**Only Undo is available**", icon="INFO")
 
@@ -1246,25 +1252,29 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
 
     def replace_name(self):
         # use the chosen material as a base one
-        for mat in bpy.data.materials:
-            name = mat.name
-            if name == self.mat_keep:
-                try:
-                    base, suffix = name.rsplit('.', 1)
-                    num = int(suffix, 10)
-                    self.mat_keep = base
-                    mat.name = self.mat_keep
-                    print("self.mat_keep in replace_name is ", self.mat_keep, name)
-                    return
-                except ValueError:
-                    self.mat_error.append(mat.name)
-                    return
+        # check if there is a name
+        self.check_no_name = (False if self.mat_keep in {""} else True)
+
+        if self.check_no_name is True:
+            for mat in bpy.data.materials:
+                name = mat.name
+                if name == self.mat_keep:
+                    try:
+                        base, suffix = name.rsplit('.', 1)
+                        num = int(suffix, 10)
+                        self.mat_keep = base
+                        mat.name = self.mat_keep
+                        return
+                    except ValueError:
+                        if name not in self.mat_error:
+                            self.mat_error.append(name)
+                        return
+        return
 
     def split_name(self, material):
         name = material.name
 
         if '.' not in name:
-            print("if '.' not in name:", name)
             return name, None
 
         base, suffix = name.rsplit('.', 1)
@@ -1273,16 +1283,14 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
             num = int(suffix, 10)
         except ValueError:
             # Not a numeric suffix
-            self.mat_error.append(mat.name)
-            print("except ValueError: for num = int(suffix, 10)", suffix)
+            if name not in self.mat_error:
+                self.mat_error.append(name)
             return name, None
 
         if self.is_auto is False:
             if base == self.mat_keep:
-                print("if base == self.mat_keep:", self.mat_keep)
                 return base, suffix
             else:
-                print("if base == self.mat_keep: else hit")
                 return name, None
 
         return base, suffix
@@ -1292,8 +1300,6 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
             return
 
         base, suffix = self.split_name(slot.material)
-
-        print("base, suffix are :", base, suffix)
 
         if suffix is None:
             return
@@ -1310,24 +1316,30 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         if self.is_not_undo is True:
             return True
 
-    def execute(self, context):
-        if self.is_auto is False:
-            self.replace_name()
-        #print("self.is_auto is ", self.is_auto)
-        print("self.mat_keep is ", self.mat_keep)
-
+    def main_loop(self, context):
         for ob in context.scene.objects:
             for slot in ob.material_slots:
                 self.fixup_slot(slot)
 
+    def execute(self, context):
+        if self.is_auto is False:
+            self.replace_name()
+            if self.check_no_name is True:
+                self.main_loop(context)
+            else:
+                warning_messages(self, 'MAT_LINK_NO_NAME')
+                self.is_not_undo = False
+                return {'CANCELLED'}
+
+        self.main_loop(context)
+
         if use_cleanmat_slots():
             cleanmatslots()
 
-        #if mat_error:
-            #warning_messages(self, '')
+        if self.mat_error:
+            warning_messages(self, 'MAT_LINK_ERROR', self.mat_error, 'MAT')
 
         self.is_not_undo = False
-
         return {'FINISHED'}
 
 
