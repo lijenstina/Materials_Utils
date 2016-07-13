@@ -1166,7 +1166,7 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
 class MATERIAL_OT_move_slot_top(bpy.types.Operator):
     bl_idname = "material.move_material_slot_top"
     bl_label = "Slot to the top"
-    bl_description = "Move the active material slots on top"
+    bl_description = "Move the active material slot on top"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -1186,13 +1186,17 @@ class MATERIAL_OT_move_slot_top(bpy.types.Operator):
         for i in range(activeObj.active_material_index):
             bpy.ops.object.material_slot_move(direction='UP')
 
+        active_mat = context.object.active_material
+        if active_mat and hasattr(active_mat, "name"):
+            warning_messages(self, 'MOVE_SLOT_UP', active_mat.name, 'MAT')
+
         return {'FINISHED'}
 
 
 class MATERIAL_OT_move_slot_bottom(bpy.types.Operator):
     bl_idname = "material.move_material_slot_bottom"
     bl_label = "Slots to the bottom"
-    bl_description = "Move the active material slot at the bottom"
+    bl_description = "Move the active material slot to the bottom"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -1212,6 +1216,10 @@ class MATERIAL_OT_move_slot_bottom(bpy.types.Operator):
 
         for i in range(lastSlotIndex - activeObj.active_material_index):
             bpy.ops.object.material_slot_move(direction='DOWN')
+
+        active_mat = context.object.active_material
+        if active_mat and hasattr(active_mat, "name"):
+            warning_messages(self, 'MOVE_SLOT_DOWN', active_mat.name, 'MAT')
 
         return {'FINISHED'}
 

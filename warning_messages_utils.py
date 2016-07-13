@@ -76,6 +76,8 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'TEX_PATH_ERROR': obj_name + "Missing Path(s)",
             'MAT_LINK_ERROR': obj_name + "not be renamed or set as Base(s)",
             'MAT_LINK_NO_NAME': "No Base name given, No changes applied",
+            'MOVE_SLOT_UP': obj_name + "been moved on top of the stack",
+            'MOVE_SLOT_DOWN': obj_name + "been moved to the bottom of the stack",
             }
 
         operator.report({'INFO'}, message[warn])
