@@ -1132,7 +1132,7 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
         obj = context.active_object
         if (not obj):
             return False
-        mat = context.material
+        mat = context.object.active_material
         if (not mat):
             return False
         if (mat.node_tree):
@@ -1351,23 +1351,9 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_material_remove(bpy.types.Operator):
-    """Remove all material slots from active objects"""
-    bl_idname = "view3d.material_remove"
-    bl_label = "Remove All Material Slots (Material Utils)"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is not None
-
-    def execute(self, context):
-        remove_materials()
-        return {'FINISHED'}
-
-
 # -----------------------------------------------------------------------------
 # menu classes #
+
 class VIEW3D_MT_assign_material(bpy.types.Menu):
     bl_label = "Assign Material"
 
@@ -1412,11 +1398,16 @@ class VIEW3D_MT_select_material(bpy.types.Menu):
 
 
 class VIEW3D_MT_remove_material(bpy.types.Menu):
-    bl_label = "Remove Materials"
+    bl_label = "Clean Slots"
 
     def draw(self, context):
         layout = self.layout
         layout.operator_context = 'INVOKE_REGION_WIN'
+
+        layout.operator("view3d.clean_material_slots",
+                        text="Clean Material Slots",
+                        icon='COLOR_BLUE')
+        UseSeparator(self, context)
 
         layout.operator("view3d.material_remove_slot", icon='COLOR_GREEN')
         layout.operator("view3d.material_remove_object", icon='COLOR_RED')
@@ -1429,23 +1420,6 @@ class VIEW3D_MT_remove_material(bpy.types.Menu):
                             icon='CANCEL')
 
 
-class VIEW3D_MT_delete_material(bpy.types.Menu):
-    bl_label = "Clean Slots"
-    bl_idname = "VIEW3D_MT_delete_material"
-
-    def draw(self, context):
-        layout = self.layout
-        layout.operator_context = 'INVOKE_REGION_WIN'
-        UseSeparator(self, context)
-        layout.label(text="Selected Object Only")
-        layout.operator("view3d.clean_material_slots",
-                        text="Clean Material Slots",
-                        icon='CANCEL')
-        layout.operator("view3d.material_remove",
-                        text="Remove Material Slots",
-                        icon='CANCEL')
-
-
 class VIEW3D_MT_master_material(bpy.types.Menu):
     bl_label = "Material Specials Menu"
 
@@ -1455,55 +1429,39 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
 
         if use_mat_preview():
             layout.operator("view3d.show_mat_preview", icon="VISIBLE_IPO_ON")
-        UseSeparator(self, context)
+            UseSeparator(self, context)
 
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
+        UseSeparator(self, context)
+        layout.operator("view3d.copy_material_to_selected", icon="COPY_ID")
 
         if c_render_engine("Cycles"):
             # Cycles
             UseSeparator(self, context)
-            layout.operator("view3d.clean_material_slots",
-                            text="Clean Material Slots",
-                            icon='COLOR_BLUE')
+            layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
             UseSeparator(self, context)
+
             layout.operator("view3d.replace_material",
                             text='Replace Material',
                             icon='ARROW_LEFTRIGHT')
-            layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-
-            UseSeparator(self, context)
-            layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
-
-            UseSeparator(self, context)
             layout.operator("view3d.fake_user_set",
                             text='Set Fake User',
                             icon='UNPINNED')
 
         elif c_render_engine("BI"):
             # Blender Internal
+            UseSeparator(self, context)
+
+            layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
+            UseSeparator(self, context)
+
             layout.operator("view3d.replace_material",
                             text='Replace Material',
                             icon='ARROW_LEFTRIGHT')
-            layout.operator("view3d.copy_material_to_selected", icon="COPY_ID")
-            layout.operator("view3d.replace_material",
-                            text='Replace Material',
-                            icon='ARROW_LEFTRIGHT')
-
-            UseSeparator(self, context)
-            layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
-
-            UseSeparator(self, context)
             layout.operator("view3d.fake_user_set",
                             text='Set Fake User',
                             icon='UNPINNED')
-            UseSeparator(self, context)
-            layout.operator("view3d.material_to_texface",
-                            text="Material to Texface",
-                            icon='MATERIAL_DATA')
-            layout.operator("view3d.texface_to_material",
-                            text="Texface to Material",
-                            icon='TEXTURE_SHADED')
 
         if not c_render_engine("OTHER"):
             UseSeparator(self, context)
@@ -1533,6 +1491,18 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
                             text='Back to Cycles Nodes',
                             icon='NODETREE')
             UseSeparator(self, context)
+
+            layout.operator("material.set_transparent_back_side",
+                            icon='IMAGE_RGB_ALPHA',
+                            text="Transparent back (BI)")
+            layout.operator("view3d.material_to_texface",
+                            text="Material to Texface",
+                            icon='MATERIAL_DATA')
+            layout.operator("view3d.texface_to_material",
+                            text="Texface to Material",
+                            icon='TEXTURE_SHADED')
+            UseSeparator(self, context)
+
         layout.operator("material.link_to_base_names", icon="KEYTYPE_BREAKDOWN_VEC")
         UseSeparator(self, context)
         layout.operator("object.rename",
@@ -1556,7 +1526,7 @@ def menu_func(self, context):
                         icon='ARROW_LEFTRIGHT')
         UseSeparator(self, context)
 
-        layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
+        layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
         UseSeparator(self, context)
 
         layout.operator("view3d.fake_user_set",
@@ -1576,25 +1546,12 @@ def menu_func(self, context):
                         icon='ARROW_LEFTRIGHT')
         UseSeparator(self, context)
 
-        layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
+        layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
         UseSeparator(self, context)
 
         layout.operator("view3d.fake_user_set",
                         text='Set Fake User',
                         icon='UNPINNED')
-        UseSeparator(self, context)
-
-        layout.operator("view3d.material_to_texface",
-                        text="Material to Texface",
-                        icon='MATERIAL_DATA')
-        layout.operator("view3d.texface_to_material",
-                        text="Texface to Material",
-                        icon='TEXTURE_SHADED')
-        UseSeparator(self, context)
-
-        layout.operator("material.set_transparent_back_side",
-                        icon='TEXTURE_DATA',
-                        text="Transparent back (BI)")
         UseSeparator(self, context)
 
         layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
