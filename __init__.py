@@ -1379,7 +1379,7 @@ class VIEW3D_MT_assign_material(bpy.types.Menu):
             layout.operator("view3d.assign_material",
                             text=material_name,
                             icon='MATERIAL_DATA').matname = material_name
-        layout.separator()
+        UseSeparator(self, context)
         layout.operator("view3d.assign_material",
                         text="Add New",
                         icon='ZOOMIN')
@@ -1422,7 +1422,7 @@ class VIEW3D_MT_remove_material(bpy.types.Menu):
         layout.operator("view3d.material_remove_object", icon='COLOR_RED')
 
         if use_remove_mat_all():
-            layout.separator()
+            UseSeparator(self, context)
             layout.operator("view3d.material_remove_all",
                             text="Remove Material Slots "
                             "(All Selected Objects)",
@@ -1436,7 +1436,7 @@ class VIEW3D_MT_delete_material(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         layout.operator_context = 'INVOKE_REGION_WIN'
-        layout.separator()
+        UseSeparator(self, context)
         layout.label(text="Selected Object Only")
         layout.operator("view3d.clean_material_slots",
                         text="Clean Material Slots",
@@ -1444,7 +1444,6 @@ class VIEW3D_MT_delete_material(bpy.types.Menu):
         layout.operator("view3d.material_remove",
                         text="Remove Material Slots",
                         icon='CANCEL')
-        self.layout.operator("material.link_to_base_names", icon='CANCEL', text="Merge Base Names")
 
 
 class VIEW3D_MT_master_material(bpy.types.Menu):
@@ -1456,34 +1455,30 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
 
         if use_mat_preview():
             layout.operator("view3d.show_mat_preview", icon="VISIBLE_IPO_ON")
-        layout.separator()
+        UseSeparator(self, context)
 
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
-        layout.operator("material.link_to_base_names", icon="INFO")
 
         if c_render_engine("Cycles"):
             # Cycles
+            UseSeparator(self, context)
             layout.operator("view3d.clean_material_slots",
                             text="Clean Material Slots",
                             icon='COLOR_BLUE')
+            UseSeparator(self, context)
             layout.operator("view3d.replace_material",
                             text='Replace Material',
                             icon='ARROW_LEFTRIGHT')
             layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
 
-            layout.separator()
+            UseSeparator(self, context)
             layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
 
-            layout.separator()
+            UseSeparator(self, context)
             layout.operator("view3d.fake_user_set",
                             text='Set Fake User',
                             icon='UNPINNED')
-
-            layout.separator()
-            # layout.label(text="Switch To Blender Render")
-            layout.operator("ml.restore", text='BI Nodes Off', icon="APPEND_BLEND")
-            layout.operator("xps_tools.restore_bi_materials_all", text='BI Nodes On', icon="APPEND_BLEND")
 
         elif c_render_engine("BI"):
             # Blender Internal
@@ -1495,29 +1490,54 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
                             text='Replace Material',
                             icon='ARROW_LEFTRIGHT')
 
-            layout.separator()
+            UseSeparator(self, context)
             layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
 
-            layout.separator()
+            UseSeparator(self, context)
             layout.operator("view3d.fake_user_set",
                             text='Set Fake User',
                             icon='UNPINNED')
-            layout.separator()
-            layout.operator("object.rename",
-                            text='Rename Image As Texture',
-                            icon='TEXTURE')
-            self.layout.separator()
+            UseSeparator(self, context)
             layout.operator("view3d.material_to_texface",
                             text="Material to Texface",
                             icon='MATERIAL_DATA')
             layout.operator("view3d.texface_to_material",
                             text="Texface to Material",
                             icon='TEXTURE_SHADED')
-            layout.separator()
-            # layout.label(text="Switch To Cycles Render")
-            layout.operator("ml.refresh_active", text='Convert Active to Cycles', icon='NODE_INSERT_OFF')
-            layout.operator("ml.refresh", text='Convert All to Cycles', icon='NODE_INSERT_ON')
-            layout.operator("cycles.restore", text='Back to Cycles Nodes', icon='NODETREE')
+
+        if not c_render_engine("OTHER"):
+            UseSeparator(self, context)
+            layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
+
+
+class VIEW3D_MT_mat_special(bpy.types.Menu):
+    bl_label = "Specials"
+
+    def draw(self, context):
+        layout = self.layout
+
+        if c_render_engine("Cycles"):
+            layout.operator("ml.restore", text='BI Nodes Off', icon="BLENDER")
+            layout.operator("xps_tools.restore_bi_materials_all",
+                            text='BI Nodes On',
+                            icon="APPEND_BLEND")
+            UseSeparator(self, context)
+        elif c_render_engine("BI"):
+            layout.operator("ml.refresh_active",
+                            text='Convert Active to Cycles',
+                            icon='NODE_INSERT_OFF')
+            layout.operator("ml.refresh",
+                            text='Convert All to Cycles',
+                            icon='NODE_INSERT_ON')
+            layout.operator("cycles.restore",
+                            text='Back to Cycles Nodes',
+                            icon='NODETREE')
+            UseSeparator(self, context)
+        layout.operator("material.link_to_base_names", icon="KEYTYPE_BREAKDOWN_VEC")
+        UseSeparator(self, context)
+        layout.operator("object.rename",
+                        text='Rename Image As Texture',
+                        icon='TEXTURE')
 
 
 # Specials Menu's #
@@ -1528,65 +1548,56 @@ def menu_func(self, context):
 
     if context.scene.render.engine == "CYCLES":
         # Cycles
-        layout.separator()
+        UseSeparator(self, context)
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
         layout.operator("view3d.replace_material",
                         text='Replace Material',
                         icon='ARROW_LEFTRIGHT')
+        UseSeparator(self, context)
 
-        layout.separator()
         layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
+        UseSeparator(self, context)
 
-        layout.separator()
         layout.operator("view3d.fake_user_set",
                         text='Set Fake User',
                         icon='UNPINNED')
-        layout.separator()
-        layout.operator("object.rename",
-                        text='Rename Image As Texture',
-                        icon='TEXTURE')
-        layout.separator()
-        layout.label(text="Switch To Blender Render")
-        layout.operator("ml.restore", text='BI Nodes Off', icon='APPEND_BLEND')
-        layout.operator("xps_tools.restore_bi_materials_all", text='BI Nodes On', icon='APPEND_BLEND')
+        UseSeparator(self, context)
+
+        layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
     elif context.scene.render.engine == "BLENDER_RENDER":
         # Blender Internal
-        layout.separator()
+        UseSeparator(self, context)
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
         layout.operator("view3d.replace_material",
                         text='Replace Material',
                         icon='ARROW_LEFTRIGHT')
+        UseSeparator(self, context)
 
-        layout.separator()
         layout.menu("VIEW3D_MT_delete_material", icon="COLOR_RED")
+        UseSeparator(self, context)
 
-        layout.separator()
         layout.operator("view3d.fake_user_set",
                         text='Set Fake User',
                         icon='UNPINNED')
-        layout.separator()
-        layout.operator("object.rename",
-                        text='Rename Image As Texture',
-                        icon='TEXTURE')
-        self.layout.separator()
+        UseSeparator(self, context)
+
         layout.operator("view3d.material_to_texface",
                         text="Material to Texface",
                         icon='MATERIAL_DATA')
         layout.operator("view3d.texface_to_material",
                         text="Texface to Material",
                         icon='TEXTURE_SHADED')
+        UseSeparator(self, context)
 
-        self.layout.separator()
-        self.layout.operator("material.set_transparent_back_side", icon='TEXTURE_DATA', text="Transparent back (BI)")
+        layout.operator("material.set_transparent_back_side",
+                        icon='TEXTURE_DATA',
+                        text="Transparent back (BI)")
+        UseSeparator(self, context)
 
-        layout.separator()
-        layout.label(text="Switch To Cycles Render")
-        layout.operator("ml.refresh_active", text='Convert Active to Cycles', icon='NODE_INSERT_OFF')
-        layout.operator("ml.refresh", text='Convert All to Cycles', icon='NODE_INSERT_ON')
-        layout.operator("cycles.restore", text='Back to Cycles Nodes', icon='NODETREE')
+        layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
 
 def menu_move(self, context):
@@ -1595,15 +1606,19 @@ def menu_move(self, context):
 
     if context.scene.render.engine == "CYCLES":
         # Cycles
-        self.layout.separator()
-        self.layout.operator("material.move_material_slot_top", icon='TRIA_UP', text="Slot to top")
-        self.layout.operator("material.move_material_slot_bottom", icon='TRIA_DOWN', text="Slot to bottom")
+        layout.operator("material.move_material_slot_top",
+                        icon='TRIA_UP', text="Slot to top")
+        layout.operator("material.move_material_slot_bottom",
+                        icon='TRIA_DOWN', text="Slot to bottom")
+        UseSeparator(self, context)
 
     elif context.scene.render.engine == "BLENDER_RENDER":
         # Blender Internal
-        self.layout.separator()
-        self.layout.operator("material.move_material_slot_top", icon='TRIA_UP', text="Slot to top")
-        self.layout.operator("material.move_material_slot_bottom", icon='TRIA_DOWN', text="Slot to bottom")
+        layout.operator("material.move_material_slot_top",
+                        icon='TRIA_UP', text="Slot to top")
+        layout.operator("material.move_material_slot_bottom",
+                        icon='TRIA_DOWN', text="Slot to bottom")
+        UseSeparator(self, context)
 
 
 # -----------------------------------------------------------------------------
@@ -1678,6 +1693,13 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
         default='PREVIEW',
     )
 
+    use_separators = bpy.props.BoolProperty(
+        name="Use Separators in the menus",
+        default=True,
+        description="Use separators in the menus, a trade-off between \n"
+                    "readability vs. using more space for displaying items"
+    )
+
     def draw(self, context):
         layout = self.layout
 
@@ -1686,9 +1708,10 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
         col = split.column()
 
         col.prop(self, "show_warnings")
-        rowa = split.row()
-        rowa.alignment = 'RIGHT'
-        rowa.prop(self, "set_cleanmatslots")
+        cola = split.column()
+        cola.alignment = 'RIGHT'
+        cola.prop(self, "set_cleanmatslots")
+        cola.prop(self, "use_separators")
         col.prop(self, "show_remove_mat")
 
         boxie = box.box()
@@ -1706,6 +1729,14 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
 
 # -----------------------------------------------------------------------------
 # utility functions:
+
+# Draw Separator #
+def UseSeparator(operator, context):
+    # pass the preferences use_separators bool to enable/disable them
+    useSep = bpy.context.user_preferences.addons[__name__].preferences.use_separators
+    if useSep:
+        operator.layout.separator()
+
 
 def included_object_types(objects):
     # Pass the bpy.data.objects.type to avoid needless assigning/removing
