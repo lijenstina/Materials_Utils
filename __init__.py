@@ -1124,7 +1124,8 @@ class MATERIAL_OT_mlrestore(bpy.types.Operator):
 class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
     bl_idname = "material.set_transparent_back_side"
     bl_label = "Transparent back (BI)"
-    bl_description = "Creates BI nodes transparently mesh background"
+    bl_description = ("Creates BI nodes transparently mesh background \n"
+                      "on Active Object's Active Material Slot")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -1132,7 +1133,7 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
         obj = context.active_object
         if (not obj):
             return False
-        mat = context.object.active_material
+        mat = obj.active_material
         if (not mat):
             return False
         if (mat.node_tree):
@@ -1143,7 +1144,8 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
         return False
 
     def execute(self, context):
-        mat = context.material
+        obj = context.active_object
+        mat = obj.active_material
         mat.use_nodes = True
         if (mat.node_tree):
             for node in mat.node_tree.nodes:
@@ -1159,6 +1161,9 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
         node_geo.location = [node_geo.location[0] + 150, node_geo.location[1] - 150]
         mat.node_tree.links.new(node_mat.outputs[0], node_out.inputs[0])
         mat.node_tree.links.new(node_geo.outputs[8], node_out.inputs[1])
+
+        if hasattr(mat, "name"):
+            warning_messages(self, 'MAT_TRNSP_BACK', mat.name, 'MAT')
 
         return {'FINISHED'}
 

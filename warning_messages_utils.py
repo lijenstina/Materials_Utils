@@ -78,6 +78,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'MAT_LINK_NO_NAME': "No Base name given, No changes applied",
             'MOVE_SLOT_UP': obj_name + "been moved on top of the stack",
             'MOVE_SLOT_DOWN': obj_name + "been moved to the bottom of the stack",
+            'MAT_TRNSP_BACK': obj_name + "been set with Alpha connected to Front/Back Geometry node",
             }
 
         operator.report({'INFO'}, message[warn])
