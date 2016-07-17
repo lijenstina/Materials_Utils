@@ -755,53 +755,6 @@ class material_restore_bi(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class OBJECT_PT_xps_convert(bpy.types.Panel):
-    bl_label = "Convert to BI and Cycles Nodes"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    def draw(self, context):
-        sc = context.scene
-        layout = self.layout
-        row = layout.row()
-        box = row.box()
-        box.label(text="Multi Image Support (Imports)")
-        box.operator("help.nodeconvert", text="Usage Information Guide", icon="INFO")
-        box.operator("xps_tools.convert_to_cycles_all", text="Convert All to Nodes", icon="TEXTURE")
-        box.operator("xps_tools.convert_to_cycles_selected", text="Convert Active to Nodes", icon="TEXTURE")
-        box.operator("xps_tools.restore_bi_materials_all", text="To BI Nodes On", icon="TEXTURE")
-
-
-class Nodeconv_help(bpy.types.Operator):
-    bl_idname = "help.nodeconvert"
-    bl_description = "Read Instructions & Current Limitations"
-    bl_label = "Usage Information Guide"
-    bl_options = {'REGISTER'}
-
-    def draw(self, context):
-        layout = self.layout
-        box = layout.box()
-
-        box.label("**Convert Imported Materials/Image Textures**:")
-        box.label("Converts BI non node materials to BI Nodes")
-        box.label("Then Converts BI Nodes to Cycles Nodes")
-        box.separator()
-        box.label("**Supports Imported Files**:")
-        box.label("fbx, .dae, .obj, .3ds, .xna and more")
-        box.separator()
-        box.label("Not all Files will produce good results")
-        box.label("Supports Alpha, Normals, Specular and Diffuse")
-        box.label("Save Your Work Often")
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
-
-    def execute(self, context):
-        return {'FINISHED'}
-
-
 def register():
     bpy.utils.register_module(__name__)
     pass

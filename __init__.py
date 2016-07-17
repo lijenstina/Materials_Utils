@@ -1370,7 +1370,7 @@ class VIEW3D_MT_assign_material(bpy.types.Menu):
             layout.operator("view3d.assign_material",
                             text=material_name,
                             icon='MATERIAL_DATA').matname = material_name
-        UseSeparator(self, context)
+        use_separator(self, context)
         layout.operator("view3d.assign_material",
                         text="Add New",
                         icon='ZOOMIN')
@@ -1412,13 +1412,13 @@ class VIEW3D_MT_remove_material(bpy.types.Menu):
         layout.operator("view3d.clean_material_slots",
                         text="Clean Material Slots",
                         icon='COLOR_BLUE')
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.operator("view3d.material_remove_slot", icon='COLOR_GREEN')
         layout.operator("view3d.material_remove_object", icon='COLOR_RED')
 
         if use_remove_mat_all():
-            UseSeparator(self, context)
+            use_separator(self, context)
             layout.operator("view3d.material_remove_all",
                             text="Remove Material Slots "
                             "(All Selected Objects)",
@@ -1434,18 +1434,18 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
 
         if use_mat_preview():
             layout.operator("view3d.show_mat_preview", icon="VISIBLE_IPO_ON")
-            UseSeparator(self, context)
+            use_separator(self, context)
 
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
-        UseSeparator(self, context)
+        use_separator(self, context)
         layout.operator("view3d.copy_material_to_selected", icon="COPY_ID")
 
         if c_render_engine("Cycles"):
             # Cycles
-            UseSeparator(self, context)
+            use_separator(self, context)
             layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-            UseSeparator(self, context)
+            use_separator(self, context)
 
             layout.operator("view3d.replace_material",
                             text='Replace Material',
@@ -1456,10 +1456,10 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
 
         elif c_render_engine("BI"):
             # Blender Internal
-            UseSeparator(self, context)
+            use_separator(self, context)
 
             layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-            UseSeparator(self, context)
+            use_separator(self, context)
 
             layout.operator("view3d.replace_material",
                             text='Replace Material',
@@ -1469,7 +1469,7 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
                             icon='UNPINNED')
 
         if not c_render_engine("OTHER"):
-            UseSeparator(self, context)
+            use_separator(self, context)
             layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
 
@@ -1484,7 +1484,7 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
             layout.operator("xps_tools.restore_bi_materials_all",
                             text='BI Nodes On',
                             icon="APPEND_BLEND")
-            UseSeparator(self, context)
+            use_separator(self, context)
         elif c_render_engine("BI"):
             layout.operator("ml.refresh_active",
                             text='Convert Active to Cycles',
@@ -1495,7 +1495,7 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
             layout.operator("cycles.restore",
                             text='Back to Cycles Nodes',
                             icon='NODETREE')
-            UseSeparator(self, context)
+            use_separator(self, context)
 
             layout.operator("material.set_transparent_back_side",
                             icon='IMAGE_RGB_ALPHA',
@@ -1506,10 +1506,10 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
             layout.operator("view3d.texface_to_material",
                             text="Texface to Material",
                             icon='TEXTURE_SHADED')
-            UseSeparator(self, context)
+            use_separator(self, context)
 
         layout.operator("material.link_to_base_names", icon="KEYTYPE_BREAKDOWN_VEC")
-        UseSeparator(self, context)
+        use_separator(self, context)
         layout.operator("object.rename",
                         text='Rename Image As Texture',
                         icon='TEXTURE')
@@ -1523,41 +1523,41 @@ def menu_func(self, context):
 
     if context.scene.render.engine == "CYCLES":
         # Cycles
-        UseSeparator(self, context)
+        use_separator(self, context)
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
         layout.operator("view3d.replace_material",
                         text='Replace Material',
                         icon='ARROW_LEFTRIGHT')
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.operator("view3d.fake_user_set",
                         text='Set Fake User',
                         icon='UNPINNED')
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
     elif context.scene.render.engine == "BLENDER_RENDER":
         # Blender Internal
-        UseSeparator(self, context)
+        use_separator(self, context)
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
         layout.operator("view3d.replace_material",
                         text='Replace Material',
                         icon='ARROW_LEFTRIGHT')
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.operator("view3d.fake_user_set",
                         text='Set Fake User',
                         icon='UNPINNED')
-        UseSeparator(self, context)
+        use_separator(self, context)
 
         layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
@@ -1572,7 +1572,7 @@ def menu_move(self, context):
                         icon='TRIA_UP', text="Slot to top")
         layout.operator("material.move_material_slot_bottom",
                         icon='TRIA_DOWN', text="Slot to bottom")
-        UseSeparator(self, context)
+        use_separator(self, context)
 
     elif context.scene.render.engine == "BLENDER_RENDER":
         # Blender Internal
@@ -1580,8 +1580,121 @@ def menu_move(self, context):
                         icon='TRIA_UP', text="Slot to top")
         layout.operator("material.move_material_slot_bottom",
                         icon='TRIA_DOWN', text="Slot to bottom")
-        UseSeparator(self, context)
+        use_separator(self, context)
 
+
+# Converters Menu's #
+
+class OBJECT_PT_scenemassive(bpy.types.Panel):
+    bl_label = "Convert BI Materials to Cycles"
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "material"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return (enable_converters() is True and converter_type('BI_CONV'))
+
+    def draw(self, context):
+        layout = self.layout
+        sc = context.scene
+
+        row = layout.row()
+        box = row.box()
+        box.operator("ml.refresh", text='Convert All to Cycles', icon='MATERIAL')
+        box.operator("ml.refresh_active", text='Convert Active to Cycles', icon='MATERIAL')
+        box.operator("ml.restore", text='To BI Nodes Off', icon='MATERIAL')
+        row = layout.row()
+        box = row.box()
+        box.label(text='BI Texture To Image File')
+        box.operator('help.biconvert', text='Usage Information Guide', icon='INFO')
+        box.prop(sc, "EXTRACT_ALPHA", text='Extract Alpha Textures (slow)')
+        box.prop(sc, "EXTRACT_PTEX", text='Extract Procedural Textures (slow)')
+        box.prop(sc, "EXTRACT_OW", text='Re-extract Textures')
+
+
+class OBJECT_PT_xps_convert(bpy.types.Panel):
+    bl_label = "Convert to BI and Cycles Nodes"
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "material"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return (enable_converters() is True and converter_type('CYC_CONV'))
+
+    def draw(self, context):
+        sc = context.scene
+        layout = self.layout
+        row = layout.row()
+        box = row.box()
+        box.label(text="Multi Image Support (Imports)")
+        box.operator("help.nodeconvert",
+                     text="Usage Information Guide", icon="INFO")
+        box.operator("xps_tools.convert_to_cycles_all",
+                     text="Convert All to Nodes", icon="TEXTURE")
+        box.operator("xps_tools.convert_to_cycles_selected",
+                     text="Convert Active to Nodes", icon="TEXTURE")
+        box.operator("xps_tools.restore_bi_materials_all",
+                     text="To BI Nodes On", icon="TEXTURE")
+
+
+class BIconv_help(bpy.types.Operator):
+    bl_idname = "help.biconvert"
+    bl_description = "Read Instructions & Current Limitations"
+    bl_label = "Usage Information Guide"
+    bl_options = {'REGISTER'}
+
+    def draw(self, context):
+        layout = self.layout
+        box = layout.box()
+
+        box.label("**Converts Bi Materials to Cycles Nodes**:")
+        box.label("Converts Basic BI non node materials")
+        box.label("Some material combinations are unsupported")
+        box.separator()
+        box.label("**Converts Bi Textures to Image Files**:")
+        box.label("Single Texture per use is only supported")
+        box.label("Requires Run As Administrator on Windows OS")
+        box.label("Saves to My Documents folder")
+        box.label("Created Texture can be Packed into your Saved File")
+        box.label("Save Your Work Often")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+
+class Nodeconv_help(bpy.types.Operator):
+    bl_idname = "help.nodeconvert"
+    bl_description = "Read Instructions & Current Limitations"
+    bl_label = "Usage Information Guide"
+    bl_options = {'REGISTER'}
+
+    def draw(self, context):
+        layout = self.layout
+        box = layout.box()
+
+        box.label("**Convert Imported Materials/Image Textures**:")
+        box.label("Converts BI non node materials to BI Nodes")
+        box.label("Then Converts BI Nodes to Cycles Nodes")
+        box.separator()
+        box.label("**Supports Imported Files**:")
+        box.label("fbx, .dae, .obj, .3ds, .xna and more")
+        box.separator()
+        box.label("Not all Files will produce good results")
+        box.label("Supports Alpha, Normals, Specular and Diffuse")
+        box.label("Save Your Work Often")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
 # Addon Preferences
@@ -1625,6 +1738,20 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
                     "performance impact on very dense meshes",
     )
 
+    show_separators = bpy.props.BoolProperty(
+        name="Use Separators in the menus",
+        default=True,
+        description="Use separators in the menus, a trade-off between \n"
+                    "readability vs. using more space for displaying items"
+    )
+
+    show_converters = bpy.props.BoolProperty(
+        name="Enable Converters",
+        default=True,
+        description=" \n"
+                    ""
+    )
+
     set_preview_size = bpy.props.EnumProperty(
         name="Preview Menu Size",
         description="Set the preview menu size \n"
@@ -1645,21 +1772,26 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
         name="Preview Menu Type",
         description="Set the the Preview menu type \n",
         items=(('LIST', "Classic",
-                " Display as a Classic List like in Blender Propreties. \n \n"
-                " Preview of Active Material not available"),
+                "Display as a Classic List like in Blender Propreties. \n \n"
+                "Preview of Active Material not available"),
                ('PREVIEW', "Preview Display",
-                " Display as a preview of Thumbnails \n"
-                " It can have some performance issues with \n"
-                " scenes containing a lot of materials \n \n"
-                " Preview of Active Material available")),
+                "Display as a preview of Thumbnails \n"
+                "It can have some performance issues with \n"
+                "scenes containing a lot of materials \n \n"
+                "Preview of Active Material available")),
         default='PREVIEW',
     )
 
-    use_separators = bpy.props.BoolProperty(
-        name="Use Separators in the menus",
-        default=True,
-        description="Use separators in the menus, a trade-off between \n"
-                    "readability vs. using more space for displaying items"
+    set_experimental_type = bpy.props.EnumProperty(
+        name="Experimental Features",
+        description=" \n",
+        items=(('ALL', "All Converters",
+                "Enable all Converters"),
+               ('CYC_CONV', "Cycles Converter",
+                "Enable Cycles related Converters"),
+               ('BI_CONV', "BI Converter",
+                "Enable Blender Internal related Converters")),
+        default='ALL',
     )
 
     def draw(self, context):
@@ -1673,7 +1805,7 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
         cola = split.column()
         cola.alignment = 'RIGHT'
         cola.prop(self, "set_cleanmatslots")
-        cola.prop(self, "use_separators")
+        cola.prop(self, "show_separators")
         col.prop(self, "show_remove_mat")
 
         boxie = box.box()
@@ -1688,14 +1820,22 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
         rowsa.alignment = 'CENTER'
         rowsa.prop(self, "set_preview_size", text="")
 
+        boxif = box.box()
+        rowf = boxif.row()
+        rowf.prop(self, "show_converters")
+        rowsf = rowf.split()
+        rowsf.enabled = (True if self.show_converters else False)
+        rowsf.alignment = 'RIGHT'
+        rowsf.prop(self, "set_experimental_type", text="")
+
 
 # -----------------------------------------------------------------------------
 # utility functions:
 
 # Draw Separator #
-def UseSeparator(operator, context):
-    # pass the preferences use_separators bool to enable/disable them
-    useSep = bpy.context.user_preferences.addons[__name__].preferences.use_separators
+def use_separator(operator, context):
+    # pass the preferences show_separators bool to enable/disable them
+    useSep = bpy.context.user_preferences.addons[__name__].preferences.show_separators
     if useSep:
         operator.layout.separator()
 
@@ -1826,6 +1966,24 @@ def size_type_is_preview():
     set_prw_type = pref.set_preview_type
 
     if set_prw_type in {'PREVIEW'}:
+        return True
+    return False
+
+
+def enable_converters():
+    pref = bpy.context.user_preferences.addons[__name__].preferences
+    set_exp_type = pref.set_experimental_type
+    shw_conv = pref.show_converters
+
+    return shw_conv
+
+
+def converter_type(types='ALL'):
+    # checks the type of the preferences 'ALL', 'CYC_CONV', 'BI_CONV'
+    pref = bpy.context.user_preferences.addons[__name__].preferences
+    set_exp_type = pref.set_experimental_type
+
+    if (set_exp_type in {'ALL'} or types == set_exp_type):
         return True
     return False
 

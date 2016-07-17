@@ -550,59 +550,6 @@ sc.EXTRACT_OW = BoolProperty(
                     description="Extract textures again instead of re-using priorly extracted textures")
 
 
-class OBJECT_PT_scenemassive(bpy.types.Panel):
-    bl_label = "Convert BI Materials to Cycles"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    def draw(self, context):
-        sc = context.scene
-        layout = self.layout
-        row = layout.row()
-        box = row.box()
-        box.operator("ml.refresh", text='Convert All to Cycles', icon='MATERIAL')
-        box.operator("ml.refresh_active", text='Convert Active to Cycles', icon='MATERIAL')
-        box.operator("ml.restore", text='To BI Nodes Off', icon='MATERIAL')
-        row = layout.row()
-        box = row.box()
-        box.label(text='BI Texture To Image File')
-        box.operator('help.biconvert', text='Usage Information Guide', icon='INFO')
-        box.prop(sc, "EXTRACT_ALPHA", text='Extract Alpha Textures (slow)')
-        box.prop(sc, "EXTRACT_PTEX", text='Extract Procedural Textures (slow)')
-        box.prop(sc, "EXTRACT_OW", text='Re-extract Textures')
-
-
-class BIconv_help(bpy.types.Operator):
-    bl_idname = "help.biconvert"
-    bl_description = "Read Instructions & Current Limitations"
-    bl_label = "Usage Information Guide"
-    bl_options = {'REGISTER'}
-
-    def draw(self, context):
-        layout = self.layout
-        box = layout.box()
-
-        box.label("**Converts Bi Materials to Cycles Nodes**:")
-        box.label("Converts Basic BI non node materials")
-        box.label("Some material combinations are unsupported")
-        box.separator()
-        box.label("**Converts Bi Textures to Image Files**:")
-        box.label("Single Texture per use is only supported")
-        box.label("Requires Run As Administrator on Windows OS")
-        box.label("Saves to My Documents folder")
-        box.label("Created Texture can be Packed into your Saved File")
-        box.label("Save Your Work Often")
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
-
-    def execute(self, context):
-        CheckImagePath()
-        return {'FINISHED'}
-
-
 def register():
     bpy.utils.register_module(__name__)
     pass
@@ -610,6 +557,9 @@ def register():
 
 def unregister():
     bpy.utils.unregister_module(__name__)
+    del bpy.types.Scene.EXTRACT_ALPHA
+    del bpy.types.Scene.EXTRACT_PTEX
+    del bpy.types.Scene.EXTRACT_OW
     pass
 
 if __name__ == "__main__":
