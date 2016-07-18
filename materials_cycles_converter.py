@@ -45,6 +45,15 @@ import os
 from os import path, access
 from .warning_messages_utils import warning_messages
 
+from bpy.props import *
+sc = bpy.types.Scene
+sc.EXTRACT_ALPHA = BoolProperty(attr="EXTRACT_ALPHA", default=False)
+sc.EXTRACT_PTEX = BoolProperty(attr="EXTRACT_PTEX", default=False)
+sc.EXTRACT_OW = BoolProperty(
+                    attr="Overwrite",
+                    default=False,
+                    description="Extract textures again instead of re-using priorly extracted textures")
+
 # switch for operator's function called after AutoNodeInitiate
 CHECK_AUTONODE = False
 
@@ -538,16 +547,6 @@ class mlrestore(bpy.types.Operator):
     def execute(self, context):
         AutoNodeOff(self)
         return {'FINISHED'}
-
-
-from bpy.props import *
-sc = bpy.types.Scene
-sc.EXTRACT_ALPHA = BoolProperty(attr="EXTRACT_ALPHA", default=False)
-sc.EXTRACT_PTEX = BoolProperty(attr="EXTRACT_PTEX", default=False)
-sc.EXTRACT_OW = BoolProperty(
-                    attr="Overwrite",
-                    default=False,
-                    description="Extract textures again instead of re-using priorly extracted textures")
 
 
 def register():

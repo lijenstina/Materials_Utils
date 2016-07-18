@@ -1787,9 +1787,9 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
         description=" \n",
         items=(('ALL', "All Converters",
                 "Enable all Converters"),
-               ('CYC_CONV', "Cycles Converter",
-                "Enable Cycles related Converters"),
-               ('BI_CONV', "BI Converter",
+               ('CYC_CONV', "BI and Cycles Nodes",
+                "Enable Cycles related Convert"),
+               ('BI_CONV', "BI To Cycles",
                 "Enable Blender Internal related Converters")),
         default='ALL',
     )
