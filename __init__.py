@@ -1667,6 +1667,8 @@ class OBJECT_PT_converter_help(bpy.types.Operator):
         else:
             self.draw_bi_conv_help(box, context)
 
+        box.label("Save Your Work Often")
+
     def draw_nodeconv_help(self, box, context):
         box.label("**Convert Imported Materials/Image Textures**:")
         box.label("Converts BI non node materials to BI Nodes")
@@ -1677,7 +1679,6 @@ class OBJECT_PT_converter_help(bpy.types.Operator):
         box.separator()
         box.label("Not all Files will produce good results")
         box.label("Supports Alpha, Normals, Specular and Diffuse")
-        box.label("Save Your Work Often")
 
     def draw_bi_conv_help(self, box, context):
         box.label("**Converts Bi Materials to Cycles Nodes**:")
@@ -1689,7 +1690,6 @@ class OBJECT_PT_converter_help(bpy.types.Operator):
         box.label("Requires Run As Administrator on Windows OS")
         box.label("Saves to My Documents folder")
         box.label("Created Texture can be Packed into your Saved File")
-        box.label("Save Your Work Often")
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
