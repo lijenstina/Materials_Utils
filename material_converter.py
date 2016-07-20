@@ -2,11 +2,9 @@
 
 import bpy
 import math
+from math import (log, pow, exp)
 from mathutils import Vector
 import os.path
-from math import log
-from math import pow
-from math import exp
 from bpy.props import *
 from .warning_messages_utils import warning_messages
 
@@ -62,8 +60,6 @@ def makeTextureNodeDict(cmat):
         texNode = None
         if tex.type == 'IMAGE':
             texNode = makeNodeUsingImage1(cmat, tex)
-        # if not tex.type == 'IMAGE':
-        #    texNode = makeNodeUsingImage2(cmat, tex)
         if texNode:
             nodesDictionary[tex] = texNode
     return nodesDictionary
@@ -186,11 +182,7 @@ def replaceNode(oldNode, newNode):
 def BIToCycleTexCoord(links, textureSlot, texCoordNode, textureMappingNode):
     # Texture Coordinates
     linkOutput = None
-    if textureSlot.texture_coords == 'TANGENT':
-        linkOutput = None
-    elif textureSlot.texture_coords == 'STRESS':
-        linkOutput = None
-    elif textureSlot.texture_coords == 'STRAND':
+    if textureSlot.texture_coords in {'TANGENT', 'STRESS', 'STRAND'}:
         linkOutput = None
     elif textureSlot.texture_coords == 'REFLECTION':
         linkOutput = 'Reflection'
@@ -578,20 +570,18 @@ def hasAlphaTex(cmat):
 
 
 def AutoNode(active=False):
-    print('')
-    print('________________________________________')
-    print('START CYCLES CONVERSION')
+    print("\n________________________________________ \n"
+          "*** START CYCLES CONVERSION ***")
 
     sceneContext = bpy.context.scene
 
     if active:
-        materials = [mat for obj in bpy.context.selected_objects if obj.type == 'MESH' for mat in obj.data.materials]
+        materials = [mat for obj in bpy.context.selected_objects if
+                     obj.type == 'MESH' for mat in obj.data.materials]
     else:
         materials = bpy.data.materials
 
     for cmat in materials:
-        # if locked:
-        #     continue
         cmat.use_nodes = True
         clearCycleMaterial(cmat)
         makeBiNodes(cmat)
@@ -708,12 +698,7 @@ class material_convert_all(bpy.types.Operator):
     bl_idname = "xps_tools.convert_to_cycles_all"
     bl_label = "Convert All Materials"
     bl_description = "Convert all selected to BI Nodes & Cycles Nodes"
-    bl_register = True
-    bl_undo = True
-
-    @classmethod
-    def poll(cls, context):
-        return True
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         AutoNode()
@@ -724,8 +709,7 @@ class material_convert_selected(bpy.types.Operator):
     bl_idname = "xps_tools.convert_to_cycles_selected"
     bl_label = "Convert All Materials From Selected Objects"
     bl_description = "Convert all selected to BI Nodes & Cycles Nodes"
-    bl_register = True
-    bl_undo = True
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -743,12 +727,7 @@ class material_restore_bi(bpy.types.Operator):
     bl_idname = "xps_tools.restore_bi_materials_all"
     bl_label = "Restore Blender Internal Materials"
     bl_description = " Switch to Blender Internal Render \n Nodes On"
-    bl_register = True
-    bl_undo = True
-
-    @classmethod
-    def poll(cls, context):
-        return True
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         AutoNodeOn(self)

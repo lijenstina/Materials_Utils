@@ -15,7 +15,7 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-#  (c) 2015 meta-androcto, parts based on work by Saidenka, Materials Utils by MichaleW,
+#  (c) 2016 meta-androcto, parts based on work by Saidenka, Materials Utils by MichaleW,
 #           lijenstina, codemanx, Materials Conversion: Silvio Falcinelli, johnzero7#,
 #           link to base names: Sybren, texture renamer: Yadoob
 
@@ -108,8 +108,8 @@ def replace_material(m1, m2, all_objects=False, update_selection=False, operator
     matrep = bpy.data.materials.get(m2)
 
     if matorg != matrep and None not in (matorg, matrep):
-        # store active object
 
+        # store active object
         if all_objects:
             objs = bpy.data.objects
         else:
@@ -178,7 +178,6 @@ def select_material_by_name(find_mat_name):
             # deselect non-meshes
             else:
                 ob.select = False
-
     else:
         # it's editmode, so select the polygons
         ob = actob
@@ -187,13 +186,13 @@ def select_material_by_name(find_mat_name):
         # same material can be on multiple slots
         slot_indeces = []
         i = 0
-        # found = False  # UNUSED
+
         for m in ms:
             if m.material == find_mat:
                 slot_indeces.append(i)
-                # found = True  # UNUSED
             i += 1
         me = ob.data
+
         for f in me.polygons:
             if f.material_index in slot_indeces:
                 f.select = True
@@ -705,7 +704,7 @@ def remove_materials_all(operator=None):
         warning_messages(operator, warn_msg)
 
 
-def CyclesNodeOn(operator=None):
+def cycles_node_on(operator=None):
     mats = bpy.data.materials
     for cmat in mats:
         cmat.use_nodes = True
@@ -1117,7 +1116,7 @@ class MATERIAL_OT_mlrestore(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        CyclesNodeOn(self)
+        cycles_node_on(self)
         return {'FINISHED'}
 
 
@@ -1602,15 +1601,22 @@ class OBJECT_PT_scenemassive(bpy.types.Panel):
 
         row = layout.row()
         box = row.box()
-        box.operator("ml.refresh", text='Convert All to Cycles', icon='MATERIAL')
-        box.operator("ml.refresh_active", text='Convert Active to Cycles', icon='MATERIAL')
-        box.operator("ml.restore", text='To BI Nodes Off', icon='MATERIAL')
+        box.operator("ml.refresh",
+                     text='Convert All to Cycles', icon='MATERIAL')
+        box.operator("ml.refresh_active",
+                     text='Convert Active to Cycles', icon='MATERIAL')
+        box.operator("ml.restore",
+                     text='To BI Nodes Off', icon='MATERIAL')
+
         row = layout.row()
         box = row.box()
         box.label(text='BI Texture To Image File')
-        box.operator('help.biconvert', text='Usage Information Guide', icon='INFO')
-        box.prop(sc, "EXTRACT_ALPHA", text='Extract Alpha Textures (slow)')
-        box.prop(sc, "EXTRACT_PTEX", text='Extract Procedural Textures (slow)')
+        box.operator("help.converter",
+                     text="Usage Information Guide", icon="INFO").switch_nodeconv = False
+        box.prop(sc, "EXTRACT_ALPHA",
+                 text='Extract Alpha Textures (slow)')
+        box.prop(sc, "EXTRACT_PTEX",
+                 text='Extract Procedural Textures (slow)')
         box.prop(sc, "EXTRACT_OW", text='Re-extract Textures')
 
 
@@ -1631,8 +1637,8 @@ class OBJECT_PT_xps_convert(bpy.types.Panel):
         row = layout.row()
         box = row.box()
         box.label(text="Multi Image Support (Imports)")
-        box.operator("help.nodeconvert",
-                     text="Usage Information Guide", icon="INFO")
+        box.operator("help.converter",
+                     text="Usage Information Guide", icon="INFO").switch_nodeconv = True
         box.operator("xps_tools.convert_to_cycles_all",
                      text="Convert All to Nodes", icon="TEXTURE")
         box.operator("xps_tools.convert_to_cycles_selected",
@@ -1641,16 +1647,39 @@ class OBJECT_PT_xps_convert(bpy.types.Panel):
                      text="To BI Nodes On", icon="TEXTURE")
 
 
-class BIconv_help(bpy.types.Operator):
-    bl_idname = "help.biconvert"
+# Converters Help #
+
+class OBJECT_PT_converter_help(bpy.types.Operator):
+    bl_idname = "help.converter"
     bl_description = "Read Instructions & Current Limitations"
     bl_label = "Usage Information Guide"
     bl_options = {'REGISTER'}
+
+    switch_nodeconv = BoolProperty(name="Switch Help to nodeconv",
+                                   default=False)
 
     def draw(self, context):
         layout = self.layout
         box = layout.box()
 
+        if self.switch_nodeconv is True:
+            self.draw_nodeconv_help(box, context)
+        else:
+            self.draw_bi_conv_help(box, context)
+
+    def draw_nodeconv_help(self, box, context):
+        box.label("**Convert Imported Materials/Image Textures**:")
+        box.label("Converts BI non node materials to BI Nodes")
+        box.label("Then Converts BI Nodes to Cycles Nodes")
+        box.separator()
+        box.label("**Supports Imported Files**:")
+        box.label("fbx, .dae, .obj, .3ds, .xna and more")
+        box.separator()
+        box.label("Not all Files will produce good results")
+        box.label("Supports Alpha, Normals, Specular and Diffuse")
+        box.label("Save Your Work Often")
+
+    def draw_bi_conv_help(self, box, context):
         box.label("**Converts Bi Materials to Cycles Nodes**:")
         box.label("Converts Basic BI non node materials")
         box.label("Some material combinations are unsupported")
@@ -1668,33 +1697,6 @@ class BIconv_help(bpy.types.Operator):
     def execute(self, context):
         return {'FINISHED'}
 
-
-class Nodeconv_help(bpy.types.Operator):
-    bl_idname = "help.nodeconvert"
-    bl_description = "Read Instructions & Current Limitations"
-    bl_label = "Usage Information Guide"
-    bl_options = {'REGISTER'}
-
-    def draw(self, context):
-        layout = self.layout
-        box = layout.box()
-
-        box.label("**Convert Imported Materials/Image Textures**:")
-        box.label("Converts BI non node materials to BI Nodes")
-        box.label("Then Converts BI Nodes to Cycles Nodes")
-        box.separator()
-        box.label("**Supports Imported Files**:")
-        box.label("fbx, .dae, .obj, .3ds, .xna and more")
-        box.separator()
-        box.label("Not all Files will produce good results")
-        box.label("Supports Alpha, Normals, Specular and Diffuse")
-        box.label("Save Your Work Often")
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
-
-    def execute(self, context):
-        return {'FINISHED'}
 
 # -----------------------------------------------------------------------------
 # Addon Preferences
@@ -1846,9 +1848,7 @@ def included_object_types(objects):
     included = ['MESH', 'CURVE', 'SURFACE', 'FONT', 'META']
 
     obj = objects
-    if (obj and obj in included):
-        return True
-    return False
+    return bool(obj and obj in included)
 
 
 def check_is_excluded_obj_types(contxt):
@@ -1886,9 +1886,7 @@ def c_context_use_nodes():
     actob = bpy.context.active_object
     u_node = (actob.active_material.use_nodes if hasattr(actob, "active_material") else False)
 
-    if u_node:
-        return True
-    return False
+    return bool(u_node)
 
 
 def c_render_engine(cyc=None):
@@ -1927,27 +1925,21 @@ def use_remove_mat_all():
     pref = bpy.context.user_preferences.addons[__name__].preferences
     show_rmv_mat = pref.show_remove_mat
 
-    if show_rmv_mat:
-        return True
-    return False
+    return bool(show_rmv_mat)
 
 
 def use_mat_preview():
     pref = bpy.context.user_preferences.addons[__name__].preferences
     show_mat_prw = pref.show_mat_preview
 
-    if show_mat_prw:
-        return True
-    return False
+    return bool(show_mat_prw)
 
 
 def use_cleanmat_slots():
     pref = bpy.context.user_preferences.addons[__name__].preferences
     use_mat_clean = pref.set_cleanmatslots
 
-    if use_mat_clean:
-        return True
-    return False
+    return bool(use_mat_clean)
 
 
 def size_preview():
@@ -1965,14 +1957,11 @@ def size_type_is_preview():
     pref = bpy.context.user_preferences.addons[__name__].preferences
     set_prw_type = pref.set_preview_type
 
-    if set_prw_type in {'PREVIEW'}:
-        return True
-    return False
+    return bool(set_prw_type in {'PREVIEW'})
 
 
 def enable_converters():
     pref = bpy.context.user_preferences.addons[__name__].preferences
-    set_exp_type = pref.set_experimental_type
     shw_conv = pref.show_converters
 
     return shw_conv
@@ -1983,9 +1972,7 @@ def converter_type(types='ALL'):
     pref = bpy.context.user_preferences.addons[__name__].preferences
     set_exp_type = pref.set_experimental_type
 
-    if (set_exp_type in {'ALL'} or types == set_exp_type):
-        return True
-    return False
+    return bool(set_exp_type in {'ALL'} or types == set_exp_type)
 
 
 def register():

@@ -1,45 +1,10 @@
-# convert_materials_to_cycles.py
-#
-# Copyright (C) 5-mar-2012, Silvio Falcinelli. Fixes by others.
-#
+# gpl: author Silvio Falcinelli. Fixes by others.
 # special thanks to user blenderartists.org cmomoney
-#
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# ***** END GPL LICENCE BLOCK *****
-
-bl_info = {
-    "name": "Convert Materials to Cycles",
-    "author": "Silvio Falcinelli, updates by community",
-    "version": (0, 11, 2),
-    "blender": (2, 71, 0),
-    "location": "Properties > Material > Convert to Cycles",
-    "description": "Convert non-nodes materials to Cycles",
-    "warning": "",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
-                "Scripts/Material/Blender_Cycles_Materials_Converter",
-    "category": "Material"}
 
 
 import bpy
 import math
-from math import log
-from math import pow
-from math import exp
+from math import (log, pow, exp)
 
 import os
 from os import path, access
@@ -52,7 +17,8 @@ sc.EXTRACT_PTEX = BoolProperty(attr="EXTRACT_PTEX", default=False)
 sc.EXTRACT_OW = BoolProperty(
                     attr="Overwrite",
                     default=False,
-                    description="Extract textures again instead of re-using priorly extracted textures")
+                    description="Extract textures again instead of re-using priorly extracted textures"
+                    )
 
 # switch for operator's function called after AutoNodeInitiate
 CHECK_AUTONODE = False
@@ -71,28 +37,24 @@ def CheckImagePath(operator=None):
     for image in bpy.data.images:
         if image:
             path = bpy.path.abspath(image.filepath)
-            print("image name is %s and path is %s:" % (image.name, path))
             if os.path.exists(path):
                 if (os.access(os.path.dirname(path), os.W_OK) and
                    os.access(path, os.W_OK)):
-                    print("directory %s and file %s is writeable." % ((os.path.dirname(path)), path))
                     continue
                 else:
-                    print("os.access(os.path.(path) not passed!!!", os.access(path, os.W_OK))
                     warning_messages(operator, 'TEX_D_T_ERROR', image.name, "FILE")
                     return False
             else:
-                print("os.path.exists(path) not passed!!!", os.path.exists(path))
                 warning_messages(operator, 'TEX_PATH_ERROR', image.name, "FILE")
                 return False
         return False
-    print("CheckImagePath returns True!!!")
     return True
 
 
 def BakingText(tex, mode):
-    print('________________________________________')
-    print('INFO start bake texture ' + tex.name)
+    print("/n ________________________________________"
+          "INFO start bake texture " + tex.name)
+
     bpy.ops.object.mode_set(mode='OBJECT')
     sc = bpy.context.scene
     tmat = ''
@@ -165,7 +127,7 @@ def BakingText(tex, mode):
         bpy.data.materials.remove(tmat)
 
     # print('INFO : end Bake ' + img.filepath_raw )
-    print('________________________________________')
+    print("________________________________________")
 
 
 def AutoNodeInitiate(active=False, operator=None):
@@ -470,8 +432,7 @@ class mllock(bpy.types.Operator):
     bl_idname = "ml.lock"
     bl_label = "Lock"
     bl_description = "Lock/unlock this material against modification by conversions"
-    bl_register = True
-    bl_undo = True
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -493,8 +454,7 @@ class mlrefresh(bpy.types.Operator):
     bl_idname = "ml.refresh"
     bl_label = "Convert All Materials"
     bl_description = "Convert all materials in the scene from non-nodes to Cycles"
-    bl_register = True
-    bl_undo = True
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -515,12 +475,7 @@ class mlrefresh_active(bpy.types.Operator):
     bl_idname = "ml.refresh_active"
     bl_label = "Convert All Materials From Active Object"
     bl_description = "Convert all Active Object's Materials \n from non-nodes to Cycles"
-    bl_register = True
-    bl_undo = True
-
-    @classmethod
-    def poll(cls, context):
-        return True
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         AutoNodeInitiate(True, self)
@@ -537,12 +492,7 @@ class mlrestore(bpy.types.Operator):
     bl_label = "Restore"
     bl_description = ("Switch Back to Blender Internal \n"
                       "Use Nodes Off")
-    bl_register = True
-    bl_undo = True
-
-    @classmethod
-    def poll(cls, context):
-        return True
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         AutoNodeOff(self)

@@ -1,5 +1,3 @@
-bl_info = {"name": "Texture Renamer", "category": "Material"}
-
 import bpy
 from bpy.props import StringProperty
 from . import warning_messages_utils
