@@ -11,17 +11,13 @@ from os import path, access
 from .warning_messages_utils import warning_messages
 
 from bpy.props import *
-sc = bpy.types.Scene
-sc.EXTRACT_ALPHA = BoolProperty(attr="EXTRACT_ALPHA", default=False)
-sc.EXTRACT_PTEX = BoolProperty(attr="EXTRACT_PTEX", default=False)
-sc.EXTRACT_OW = BoolProperty(
-                    attr="Overwrite",
-                    default=False,
-                    description="Extract textures again instead of re-using priorly extracted textures"
-                    )
 
 # switch for operator's function called after AutoNodeInitiate
 CHECK_AUTONODE = False
+
+# collect report for the operator
+# string that has . as separators for splitting into new lines
+COLLECT_REPORT = ""
 
 
 def AutoNodeOff(operator=None):
@@ -123,6 +119,7 @@ def BakingText(tex, mode):
     sc.objects.active = Robj
     img.user_clear()
     bpy.data.images.remove(img)
+
     if tmat.users == 0:
         bpy.data.materials.remove(tmat)
 
@@ -453,7 +450,7 @@ class mllock(bpy.types.Operator):
 class mlrefresh(bpy.types.Operator):
     bl_idname = "ml.refresh"
     bl_label = "Convert All Materials"
-    bl_description = "Convert all materials in the scene from non-nodes to Cycles"
+    bl_description = "Convert All Materials in the scene from non-nodes to Cycles"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -474,8 +471,12 @@ class mlrefresh(bpy.types.Operator):
 class mlrefresh_active(bpy.types.Operator):
     bl_idname = "ml.refresh_active"
     bl_label = "Convert All Materials From Active Object"
-    bl_description = "Convert all Active Object's Materials \n from non-nodes to Cycles"
+    bl_description = "Convert all Active Object's Materials from non-nodes to Cycles"
     bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
 
     def execute(self, context):
         AutoNodeInitiate(True, self)
@@ -506,9 +507,6 @@ def register():
 
 def unregister():
     bpy.utils.unregister_module(__name__)
-    del bpy.types.Scene.EXTRACT_ALPHA
-    del bpy.types.Scene.EXTRACT_PTEX
-    del bpy.types.Scene.EXTRACT_OW
     pass
 
 if __name__ == "__main__":

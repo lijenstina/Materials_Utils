@@ -1479,22 +1479,24 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
         layout = self.layout
 
         if c_render_engine("Cycles"):
-            layout.operator("ml.restore", text='BI Nodes Off', icon="BLENDER")
-            layout.operator("xps_tools.restore_bi_materials_all",
-                            text='BI Nodes On',
-                            icon="APPEND_BLEND")
-            use_separator(self, context)
+            if (enable_converters() is True and converter_type('BI_CONV')):
+                layout.operator("ml.restore", text='BI Nodes Off', icon="BLENDER")
+                layout.operator("xps_tools.restore_bi_materials_all",
+                                text='BI Nodes On',
+                                icon="APPEND_BLEND")
+                use_separator(self, context)
         elif c_render_engine("BI"):
-            layout.operator("ml.refresh_active",
-                            text='Convert Active to Cycles',
-                            icon='NODE_INSERT_OFF')
-            layout.operator("ml.refresh",
-                            text='Convert All to Cycles',
-                            icon='NODE_INSERT_ON')
-            layout.operator("cycles.restore",
-                            text='Back to Cycles Nodes',
-                            icon='NODETREE')
-            use_separator(self, context)
+            if (enable_converters() is True and converter_type('CYC_CONV')):
+                layout.operator("ml.refresh_active",
+                                text='Convert Active to Cycles',
+                                icon='NODE_INSERT_OFF')
+                layout.operator("ml.refresh",
+                                text='Convert All to Cycles',
+                                icon='NODE_INSERT_ON')
+                layout.operator("cycles.restore",
+                                text='Back to Cycles Nodes',
+                                icon='NODETREE')
+                use_separator(self, context)
 
             layout.operator("material.set_transparent_back_side",
                             icon='IMAGE_RGB_ALPHA',
@@ -1583,8 +1585,26 @@ def menu_move(self, context):
 
 
 # Converters Menu's #
+class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
+    bl_idname = "scenemassive.opt"
+    bl_description = "Addtional Options for Convert BI to Cycles"
+    bl_label = "Options"
+    bl_options = {'REGISTER'}
 
-class OBJECT_PT_scenemassive(bpy.types.Panel):
+    def draw(self, context):
+        layout = self.layout
+        sc = context.scene
+
+        layout.prop(sc, "EXTRACT_ALPHA",
+                 text="Extract Alpha Textures (slow)", icon='IMAGE_RGB_ALPHA')
+        use_separator(self, context)
+        layout.prop(sc, "EXTRACT_PTEX",
+                 text="Extract Procedural Textures (slow)", icon='SEQ_HISTOGRAM')
+        use_separator(self, context)
+        layout.prop(sc, "EXTRACT_OW", text="Re-extract Textures", icon='SEQ_SPLITVIEW')
+
+
+class MATERIAL_PT_scenemassive(bpy.types.Panel):
     bl_label = "Convert BI Materials to Cycles"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
@@ -1598,29 +1618,27 @@ class OBJECT_PT_scenemassive(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         sc = context.scene
-
         row = layout.row()
         box = row.box()
-        box.operator("ml.refresh",
-                     text='Convert All to Cycles', icon='MATERIAL')
-        box.operator("ml.refresh_active",
-                     text='Convert Active to Cycles', icon='MATERIAL')
+
+        split = box.box().split(0.5)
+        split.operator("ml.refresh",
+                     text="Convert All to Cycles", icon='MATERIAL')
+        split.operator("ml.refresh_active",
+                     text="Convert Active to Cycles", icon='MATERIAL')
+        box = box.box()
         box.operator("ml.restore",
-                     text='To BI Nodes Off', icon='MATERIAL')
+                     text="To BI Nodes Off", icon='MATERIAL')
 
         row = layout.row()
         box = row.box()
-        box.label(text='BI Texture To Image File')
-        box.operator("help.converter",
-                     text="Usage Information Guide", icon="INFO").switch_nodeconv = False
-        box.prop(sc, "EXTRACT_ALPHA",
-                 text='Extract Alpha Textures (slow)')
-        box.prop(sc, "EXTRACT_PTEX",
-                 text='Extract Procedural Textures (slow)')
-        box.prop(sc, "EXTRACT_OW", text='Re-extract Textures')
+        box.menu("scenemassive.opt", text="Advanced Options", icon='SCRIPTWIN')
+        box = row.box()
+        box.menu("help.biconvert",
+                 text="Usage Information Guide", icon='MOD_EXPLODE')
 
 
-class OBJECT_PT_xps_convert(bpy.types.Panel):
+class MATERIAL_PT_xps_convert(bpy.types.Panel):
     bl_label = "Convert to BI and Cycles Nodes"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
@@ -1636,63 +1654,105 @@ class OBJECT_PT_xps_convert(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         box = row.box()
+
         box.label(text="Multi Image Support (Imports)")
-        box.operator("help.converter",
-                     text="Usage Information Guide", icon="INFO").switch_nodeconv = True
-        box.operator("xps_tools.convert_to_cycles_all",
+        split = box.box().split(0.5)
+        split.operator("xps_tools.convert_to_cycles_all",
                      text="Convert All to Nodes", icon="TEXTURE")
-        box.operator("xps_tools.convert_to_cycles_selected",
-                     text="Convert Active to Nodes", icon="TEXTURE")
+        split.operator("xps_tools.convert_to_cycles_selected",
+                     text="Convert Selected to Nodes", icon="TEXTURE")
+        col = layout.column()
+        row = col.row()
+        box = row.box()
         box.operator("xps_tools.restore_bi_materials_all",
                      text="To BI Nodes On", icon="TEXTURE")
+        box = row.box()
+        box.menu("help.nodeconvert",
+                 text="Usage Information Guide", icon="MOD_EXPLODE")
+        box = layout.box()
+        box.label("Save Directory")
+        box.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
 
 
 # Converters Help #
 
-class OBJECT_PT_converter_help(bpy.types.Operator):
-    bl_idname = "help.converter"
+class MATERIAL_MT_biconv_help(bpy.types.Menu):
+    bl_idname = "help.biconvert"
     bl_description = "Read Instructions & Current Limitations"
     bl_label = "Usage Information Guide"
     bl_options = {'REGISTER'}
 
-    switch_nodeconv = BoolProperty(name="Switch Help to nodeconv",
-                                   default=False)
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Save Your Work Often", icon="ERROR")
+        use_separator(self, context)
+        layout.label(text="Select the texture loaded in the image node")
+        layout.label(text="Press Ctrl/T to create the image nodes")
+        layout.label(text="In the Node Editor, Select the Diffuse Node")
+        layout.label(text="Enable Node Wrangler addon", icon="NODETREE")
+        layout.label(text="If Unconnected or No Image Node Error:", icon="MOD_EXPLODE")
+        use_separator(self, context)
+        layout.label(text="May Require Run As Administrator on Windows OS", icon="ERROR")
+        layout.label(text="Converts Bi Textures to Image Files:", icon="MOD_EXPLODE")
+        use_separator(self, context)
+        layout.label(text="Some material combinations are unsupported")
+        layout.label(text="Single BI Texture/Image per convert is only supported")
+        layout.label(text="Converts Basic BI non node materials to Cycles")
+        use_separator(self, context)
+        layout.label(text="Convert Bi Materials to Cycles Nodes:", icon="INFO")
+
+
+class MATERIAL_MT_nodeconv_help(bpy.types.Menu):
+    bl_idname = "help.nodeconvert"
+    bl_description = "Read Instructions & Current Limitations"
+    bl_label = "Usage Information Guide"
+    bl_options = {'REGISTER'}
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Save Your Work Often", icon="ERROR")
+        use_separator(self, context)
+        layout.label(text="Select the texture loaded in the image node")
+        layout.label(text="Press Ctrl/T to create the image nodes")
+        layout.label(text="In the Node Editor, Select the Diffuse Node")
+        layout.label(text="Enable Node Wrangler addon", icon="NODETREE")
+        layout.label(text="If Unconnected or No Image Node Error:", icon="MOD_EXPLODE")
+        use_separator(self, context)
+        layout.label(text="Not all Files will produce good results", icon="ERROR")
+        layout.label(text="fbx, .dae, .obj, .3ds, .xna and more")
+        layout.label(text="**Supports Imported Files**:", icon="IMPORT")
+        use_separator(self, context)
+        layout.label(text="For some file types")
+        layout.label(text="Supports Alpha, Normals, Specular and Diffuse")
+        layout.label(text="Then Converts BI Nodes to Cycles Nodes")
+        layout.label(text="Converts BI non node materials to BI Nodes")
+        use_separator(self, context)
+        layout.label(text="Convert Materials/Image Textures from Imports:", icon="INFO")
+
+
+# Make Report #
+class material_converter_report(bpy.types.Operator):
+    bl_idname = "mat_converter.reports"
+    bl_label = "Material Converter Report"
+    bl_description = "Report about done Material Conversions"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    message = StringProperty()
 
     def draw(self, context):
         layout = self.layout
         box = layout.box()
 
-        if self.switch_nodeconv is True:
-            self.draw_nodeconv_help(box, context)
-        else:
-            self.draw_bi_conv_help(box, context)
+        box.label(text="Converter Report", icon='INFO')
 
-        box.label("Save Your Work Often")
-
-    def draw_nodeconv_help(self, box, context):
-        box.label("**Convert Imported Materials/Image Textures**:")
-        box.label("Converts BI non node materials to BI Nodes")
-        box.label("Then Converts BI Nodes to Cycles Nodes")
-        box.separator()
-        box.label("**Supports Imported Files**:")
-        box.label("fbx, .dae, .obj, .3ds, .xna and more")
-        box.separator()
-        box.label("Not all Files will produce good results")
-        box.label("Supports Alpha, Normals, Specular and Diffuse")
-
-    def draw_bi_conv_help(self, box, context):
-        box.label("**Converts Bi Materials to Cycles Nodes**:")
-        box.label("Converts Basic BI non node materials")
-        box.label("Some material combinations are unsupported")
-        box.separator()
-        box.label("**Converts Bi Textures to Image Files**:")
-        box.label("Single Texture per use is only supported")
-        box.label("Requires Run As Administrator on Windows OS")
-        box.label("Saves to My Documents folder")
-        box.label("Created Texture can be Packed into your Saved File")
+        if self.message and type(self.message) is str:
+            list_string = self.message.split(".")
+            print("list_string is:", list_string)
+            for line in range(len(list_string)):
+                box.label(text=str(list_string[line]))
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
+        return context.window_manager.invoke_props_dialog(self, width=500)
 
     def execute(self, context):
         return {'FINISHED'}
@@ -1980,6 +2040,26 @@ def register():
 
     warning_messages_utils.MAT_SPEC_NAME = __name__
 
+    # Register Scene Properties
+    bpy.types.Scene.conv_path = bpy.props.StringProperty(
+            name="Save Directory",
+            description=("Path to save images during conversion \n"
+                         "Default is the location of the blend file"),
+            default="//",
+            subtype='DIR_PATH'
+            )
+    bpy.types.Scene.EXTRACT_ALPHA = BoolProperty(
+            attr="EXTRACT_ALPHA", default=False
+            )
+    bpy.types.Scene.EXTRACT_PTEX = BoolProperty(
+            attr="EXTRACT_PTEX", default=False
+            )
+    bpy.types.Scene.EXTRACT_OW = BoolProperty(
+            attr="Overwrite",
+            default=False,
+            description="Extract textures again instead of re-using priorly extracted textures"
+            )
+
     kc = bpy.context.window_manager.keyconfigs.addon
     if kc:
         km = kc.keymaps.new(name="3D View", space_type="VIEW_3D")
@@ -2002,6 +2082,12 @@ def unregister():
 
     bpy.types.MATERIAL_MT_specials.remove(menu_move)
     bpy.types.MATERIAL_MT_specials.remove(menu_func)
+
+    del bpy.types.Scene.conv_path
+    del bpy.types.Scene.EXTRACT_ALPHA
+    del bpy.types.Scene.EXTRACT_PTEX
+    del bpy.types.Scene.EXTRACT_OW
+
     bpy.utils.unregister_module(__name__)
 
 if __name__ == "__main__":

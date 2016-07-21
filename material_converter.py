@@ -32,6 +32,9 @@ sceneContext = bpy.types.Scene
 textureNodeSizeX = 150
 textureNodeSizeY = 350
 
+# collect reports for the operator
+COLLECT_REPORT = []
+
 
 def AutoNodeOff(operator=None):
     mats = bpy.data.materials
@@ -570,6 +573,7 @@ def hasAlphaTex(cmat):
 
 
 def AutoNode(active=False):
+    COLLECT_REPORT = []
     print("\n________________________________________ \n"
           "*** START CYCLES CONVERSION ***")
 
@@ -587,7 +591,16 @@ def AutoNode(active=False):
         makeBiNodes(cmat)
         makeCyclesFromBI(cmat)
 
+    COLLECT_REPORT.append("What is going to happen?")
+    COLLECT_REPORT.append("Is Blender going to crash?")
+    COLLECT_REPORT.append("DUN DUN")
+
+    messages = ".".join(COLLECT_REPORT)
+    bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
+
     bpy.context.scene.render.engine = 'CYCLES'
+
+    COLLECT_REPORT = []
 
 
 def makeCyclesFromBI(cmat):
@@ -697,7 +710,7 @@ def makeCyclesFromBI(cmat):
 class material_convert_all(bpy.types.Operator):
     bl_idname = "xps_tools.convert_to_cycles_all"
     bl_label = "Convert All Materials"
-    bl_description = "Convert all selected to BI Nodes & Cycles Nodes"
+    bl_description = "Convert All Materials to BI and Cycles Nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -708,7 +721,7 @@ class material_convert_all(bpy.types.Operator):
 class material_convert_selected(bpy.types.Operator):
     bl_idname = "xps_tools.convert_to_cycles_selected"
     bl_label = "Convert All Materials From Selected Objects"
-    bl_description = "Convert all selected to BI Nodes & Cycles Nodes"
+    bl_description = "Convert All Materials on Selected Objects to BI and Cycles Nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -726,7 +739,7 @@ class material_convert_selected(bpy.types.Operator):
 class material_restore_bi(bpy.types.Operator):
     bl_idname = "xps_tools.restore_bi_materials_all"
     bl_label = "Restore Blender Internal Materials"
-    bl_description = " Switch to Blender Internal Render \n Nodes On"
+    bl_description = "Switch to Blender Internal Render \n Nodes On"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
