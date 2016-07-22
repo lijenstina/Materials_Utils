@@ -48,6 +48,9 @@ import bpy
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 from .warning_messages_utils import warning_messages
 
+import os
+from os import path, access
+
 
 def fake_user_set(fake_user='ON', materials='UNUSED', operator=None):
     warn_mesg, w_mesg = '', ""
@@ -1355,6 +1358,52 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class MATERIAL_OT_check_converter_path(bpy.types.Operator):
+    bl_idname = "material.check_converter_path"
+    bl_label = "Set Converters images save path"
+    bl_description = ("")
+    bl_options = {'REGISTER'}
+
+    def check_valid_path(self, context):
+        sc = context.scene
+        path = bpy.path.abspath(sc.conv_path)
+        if os.path.exists(path):
+            print("if os.path.exists(path): passed!")
+            if os.access(path, os.W_OK|os.X_OK):
+                try:
+                    print("try is entered!!!")
+                    path_test = os.path.join(path, "XYfoobartestXY.txt")
+                    print("path_test is:", path_test)
+                    with open(path_test, 'w') as f:
+                        print("if os.access(d, os.W_OK): PASSED!!")
+                    f.closed
+                    os.remove(path_test)
+                    return True
+                except (OSError, IOError):
+                    print("Except hit!!!!")
+                    return False
+            else:
+                print("if os.access(os.path.dirname(path), os.W_OK): FAILED!!")
+
+                warning_messages(operator, 'TEX_D_T_ERROR', path, "FILE")
+                return False
+        else:
+            print("if os.path.exists(path): FAILED!")
+            warning_messages(operator, 'TEX_PATH_ERROR', path, "FILE")
+            return False
+        print("if os.path.exists(path): completerly done!!!!")
+        return True
+
+    def execute(self, context):
+        print("path is :", bpy.path.abspath(context.scene.conv_path))
+        if not self.check_valid_path(context):
+            print("return CANCELLED")
+            return {'CANCELLED'}
+
+        print("return FINISHED")
+
+        return {'FINISHED'}
+
 # -----------------------------------------------------------------------------
 # menu classes #
 
@@ -1672,6 +1721,7 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
         box = layout.box()
         box.label("Save Directory")
         box.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
+        box.operator("material.check_converter_path", text="", icon="RENDER_RESULT")
 
 
 # Converters Help #
