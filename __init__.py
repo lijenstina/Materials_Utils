@@ -51,6 +51,9 @@ from .warning_messages_utils import warning_messages
 import os
 from os import path, access
 
+# flag for checking path OS writing
+CHK_VALID_PATH = True
+
 
 def fake_user_set(fake_user='ON', materials='UNUSED', operator=None):
     warn_mesg, w_mesg = '', ""
@@ -1360,16 +1363,20 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
 
 class MATERIAL_OT_check_converter_path(bpy.types.Operator):
     bl_idname = "material.check_converter_path"
-    bl_label = "Set Converters images save path"
-    bl_description = ("")
-    bl_options = {'REGISTER'}
+    bl_label = "Check Converters images/data save path"
+    bl_description = ("Checks if the given path is writeable \n"
+                      "(has OS writing privileges)")
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    #con_switch = EnumProperty(
+            #)
 
     def check_valid_path(self, context):
         sc = context.scene
         path = bpy.path.abspath(sc.conv_path)
         if os.path.exists(path):
             print("if os.path.exists(path): passed!")
-            if os.access(path, os.W_OK|os.X_OK):
+            if os.access(path, os.W_OK | os.X_OK):
                 try:
                     print("try is entered!!!")
                     path_test = os.path.join(path, "XYfoobartestXY.txt")
@@ -1381,15 +1388,16 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
                     return True
                 except (OSError, IOError):
                     print("Except hit!!!!")
+                    warning_messages(self, 'DIR_PATH_W_ERROR')
                     return False
             else:
                 print("if os.access(os.path.dirname(path), os.W_OK): FAILED!!")
 
-                warning_messages(operator, 'TEX_D_T_ERROR', path, "FILE")
+                warning_messages(self, 'DIR_PATH_A_ERROR')
                 return False
         else:
             print("if os.path.exists(path): FAILED!")
-            warning_messages(operator, 'TEX_PATH_ERROR', path, "FILE")
+            warning_messages(self, 'DIR_PATH_N_ERROR')
             return False
         print("if os.path.exists(path): completerly done!!!!")
         return True
@@ -1398,11 +1406,17 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
         print("path is :", bpy.path.abspath(context.scene.conv_path))
         if not self.check_valid_path(context):
             print("return CANCELLED")
+            CHK_VALID_PATH = False
+            print("CHK_VALID_PATH is", CHK_VALID_PATH)
             return {'CANCELLED'}
-
-        print("return FINISHED")
+        else:
+            CHK_VALID_PATH = True
+            warning_messages(self, 'DIR_PATH_W_OK')
+            print("CHK_VALID_PATH is", CHK_VALID_PATH)
+            print("return FINISHED")
 
         return {'FINISHED'}
+
 
 # -----------------------------------------------------------------------------
 # menu classes #
@@ -1645,10 +1659,10 @@ class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
         sc = context.scene
 
         layout.prop(sc, "EXTRACT_ALPHA",
-                 text="Extract Alpha Textures (slow)", icon='IMAGE_RGB_ALPHA')
+                    text="Extract Alpha Textures (slow)", icon='IMAGE_RGB_ALPHA')
         use_separator(self, context)
         layout.prop(sc, "EXTRACT_PTEX",
-                 text="Extract Procedural Textures (slow)", icon='SEQ_HISTOGRAM')
+                    text="Extract Procedural Textures (slow)", icon='SEQ_HISTOGRAM')
         use_separator(self, context)
         layout.prop(sc, "EXTRACT_OW", text="Re-extract Textures", icon='SEQ_SPLITVIEW')
 
@@ -1672,9 +1686,9 @@ class MATERIAL_PT_scenemassive(bpy.types.Panel):
 
         split = box.box().split(0.5)
         split.operator("ml.refresh",
-                     text="Convert All to Cycles", icon='MATERIAL')
+                       text="Convert All to Cycles", icon='MATERIAL')
         split.operator("ml.refresh_active",
-                     text="Convert Active to Cycles", icon='MATERIAL')
+                       text="Convert Active to Cycles", icon='MATERIAL')
         box = box.box()
         box.operator("ml.restore",
                      text="To BI Nodes Off", icon='MATERIAL')
@@ -1707,9 +1721,9 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
         box.label(text="Multi Image Support (Imports)")
         split = box.box().split(0.5)
         split.operator("xps_tools.convert_to_cycles_all",
-                     text="Convert All to Nodes", icon="TEXTURE")
+                       text="Convert All to Nodes", icon="TEXTURE")
         split.operator("xps_tools.convert_to_cycles_selected",
-                     text="Convert Selected to Nodes", icon="TEXTURE")
+                       text="Convert Selected to Nodes", icon="TEXTURE")
         col = layout.column()
         row = col.row()
         box = row.box()
@@ -1720,8 +1734,9 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
                  text="Usage Information Guide", icon="MOD_EXPLODE")
         box = layout.box()
         box.label("Save Directory")
-        box.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
-        box.operator("material.check_converter_path", text="", icon="RENDER_RESULT")
+        split = box.split(0.85)
+        split.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
+        split.operator("material.check_converter_path", text="", icon="EXTERNAL_DATA")
 
 
 # Converters Help #
