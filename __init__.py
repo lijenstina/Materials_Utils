@@ -1700,6 +1700,12 @@ class MATERIAL_PT_scenemassive(bpy.types.Panel):
         box.menu("help.biconvert",
                  text="Usage Information Guide", icon='MOD_EXPLODE')
 
+        box = layout.box()
+        box.label("Save Directory")
+        split = box.split(0.85)
+        split.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
+        split.operator("material.check_converter_path", text="", icon="EXTERNAL_DATA")
+
 
 class MATERIAL_PT_xps_convert(bpy.types.Panel):
     bl_label = "Convert to BI and Cycles Nodes"
@@ -1724,6 +1730,7 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
                        text="Convert All to Nodes", icon="TEXTURE")
         split.operator("xps_tools.convert_to_cycles_selected",
                        text="Convert Selected to Nodes", icon="TEXTURE")
+
         col = layout.column()
         row = col.row()
         box = row.box()
@@ -1732,11 +1739,6 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
         box = row.box()
         box.menu("help.nodeconvert",
                  text="Usage Information Guide", icon="MOD_EXPLODE")
-        box = layout.box()
-        box.label("Save Directory")
-        split = box.split(0.85)
-        split.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
-        split.operator("material.check_converter_path", text="", icon="EXTERNAL_DATA")
 
 
 # Converters Help #

@@ -83,6 +83,8 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'MOVE_SLOT_UP': obj_name + "been moved on top of the stack",
             'MOVE_SLOT_DOWN': obj_name + "been moved to the bottom of the stack",
             'MAT_TRNSP_BACK': obj_name + "been set with Alpha connected to Front/Back Geometry node",
+            'CONV_NO_OBJ_MAT': obj_name + "has no Materials. Nothing to convert",
+            'CONV_NO_SC_MAT': "No Materials in the Scene. Nothing to convert",
             }
 
         operator.report({'INFO'}, message[warn])

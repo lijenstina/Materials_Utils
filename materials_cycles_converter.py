@@ -145,6 +145,17 @@ def AutoNode(active=False, operator=None):
     else:
         mats = bpy.data.materials
 
+    # No Materials for the chosen action abort
+    if not mats:
+        CHECK_AUTONODE = False
+        if operator:
+            if active:
+                act_obj = bpy.context.active_object
+                warning_messages(operator, 'CONV_NO_OBJ_MAT', act_obj.name)
+            else:
+                warning_messages(operator, 'CONV_NO_SC_MAT')
+        return
+
     for cmat in mats:
         cmat.use_nodes = True
         TreeNodes = cmat.node_tree
