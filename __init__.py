@@ -1368,52 +1368,38 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
                       "(has OS writing privileges)")
     bl_options = {'REGISTER', 'INTERNAL'}
 
-    #con_switch = EnumProperty(
-            #)
-
     def check_valid_path(self, context):
         sc = context.scene
         path = bpy.path.abspath(sc.conv_path)
+        print("Testing Directory Path: ", path)
+
         if os.path.exists(path):
-            print("if os.path.exists(path): passed!")
             if os.access(path, os.W_OK | os.X_OK):
                 try:
-                    print("try is entered!!!")
                     path_test = os.path.join(path, "XYfoobartestXY.txt")
-                    print("path_test is:", path_test)
                     with open(path_test, 'w') as f:
-                        print("if os.access(d, os.W_OK): PASSED!!")
-                    f.closed
+                        f.closed
                     os.remove(path_test)
                     return True
                 except (OSError, IOError):
-                    print("Except hit!!!!")
                     warning_messages(self, 'DIR_PATH_W_ERROR')
                     return False
             else:
-                print("if os.access(os.path.dirname(path), os.W_OK): FAILED!!")
-
                 warning_messages(self, 'DIR_PATH_A_ERROR')
                 return False
         else:
-            print("if os.path.exists(path): FAILED!")
             warning_messages(self, 'DIR_PATH_N_ERROR')
             return False
-        print("if os.path.exists(path): completerly done!!!!")
+
         return True
 
     def execute(self, context):
-        print("path is :", bpy.path.abspath(context.scene.conv_path))
         if not self.check_valid_path(context):
-            print("return CANCELLED")
             CHK_VALID_PATH = False
-            print("CHK_VALID_PATH is", CHK_VALID_PATH)
             return {'CANCELLED'}
         else:
             CHK_VALID_PATH = True
             warning_messages(self, 'DIR_PATH_W_OK')
-            print("CHK_VALID_PATH is", CHK_VALID_PATH)
-            print("return FINISHED")
 
         return {'FINISHED'}
 
@@ -1648,9 +1634,10 @@ def menu_move(self, context):
 
 
 # Converters Menu's #
+
 class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
     bl_idname = "scenemassive.opt"
-    bl_description = "Addtional Options for Convert BI to Cycles"
+    bl_description = "Additional Options for Convert BI to Cycles"
     bl_label = "Options"
     bl_options = {'REGISTER'}
 
@@ -1665,6 +1652,13 @@ class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
                     text="Extract Procedural Textures (slow)", icon='SEQ_HISTOGRAM')
         use_separator(self, context)
         layout.prop(sc, "EXTRACT_OW", text="Re-extract Textures", icon='SEQ_SPLITVIEW')
+        use_separator(self, context)
+
+        layout.label("Set the Bake Resolution")
+        res = str(sc.img_bake_size)
+        layout.label("Current Setting is : %s" % (res + "x" + res), icon='INFO')
+        use_separator(self, context)
+        layout.prop(sc, "img_bake_size", icon='NODE_SEL', expand=True)
 
 
 class MATERIAL_PT_scenemassive(bpy.types.Panel):
@@ -1704,7 +1698,8 @@ class MATERIAL_PT_scenemassive(bpy.types.Panel):
         box.label("Save Directory")
         split = box.split(0.85)
         split.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
-        split.operator("material.check_converter_path", text="", icon="EXTERNAL_DATA")
+        split.operator("material.check_converter_path",
+                       text="", icon="EXTERNAL_DATA")
 
 
 class MATERIAL_PT_xps_convert(bpy.types.Panel):
@@ -1804,7 +1799,7 @@ class material_converter_report(bpy.types.Operator):
     bl_description = "Report about done Material Conversions"
     bl_options = {'REGISTER', 'INTERNAL'}
 
-    message = StringProperty()
+    message = StringProperty(maxlen=8192)
 
     def draw(self, context):
         layout = self.layout
@@ -2126,6 +2121,14 @@ def register():
             default=False,
             description="Extract textures again instead of re-using priorly extracted textures"
             )
+    bpy.types.Scene.img_bake_size = EnumProperty(
+            name="Bake Image Size",
+            description="Set the resolution size of baked images \n",
+            items=(('512', "Set : 512 x 512", "Bake Resolution 512 x 512"),
+                   ('1024', "Set : 1024 x 1024", "Bake Resolution 1024 x 1024"),
+                   ('2048', "Set : 2048 x 2048", "Bake Resolution 2048 x 2048")),
+            default='1024',
+            )
 
     kc = bpy.context.window_manager.keyconfigs.addon
     if kc:
@@ -2154,6 +2157,7 @@ def unregister():
     del bpy.types.Scene.EXTRACT_ALPHA
     del bpy.types.Scene.EXTRACT_PTEX
     del bpy.types.Scene.EXTRACT_OW
+    del bpy.types.Scene.img_bake_size
 
     bpy.utils.unregister_module(__name__)
 

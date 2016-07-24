@@ -32,8 +32,14 @@ sceneContext = bpy.types.Scene
 textureNodeSizeX = 150
 textureNodeSizeY = 350
 
-# collect reports for the operator
+# collect report for the operator
+# string that has . as delimiters for splitting into new lines
 COLLECT_REPORT = []
+
+
+def collect_report():
+    messages = ".".join(COLLECT_REPORT)
+    bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
 
 
 def AutoNodeOff(operator=None):
@@ -572,7 +578,7 @@ def hasAlphaTex(cmat):
     return tex_is_transp
 
 
-def AutoNode(active=False):
+def AutoNode(active=False, operator=None):
     COLLECT_REPORT = []
     print("\n________________________________________ \n"
           "*** START CYCLES CONVERSION ***")
@@ -584,6 +590,16 @@ def AutoNode(active=False):
                      obj.type == 'MESH' for mat in obj.data.materials]
     else:
         materials = bpy.data.materials
+
+    # No Materials for the chosen action abort
+    if not materials:
+        CHECK_AUTONODE = False
+        if operator:
+            if active:
+                warning_messages(operator, 'CONV_NO_SEL_MAT')
+            else:
+                warning_messages(operator, 'CONV_NO_SC_MAT')
+        return
 
     for cmat in materials:
         cmat.use_nodes = True
@@ -600,7 +616,6 @@ def AutoNode(active=False):
 
     bpy.context.scene.render.engine = 'CYCLES'
 
-    COLLECT_REPORT = []
 
 
 def makeCyclesFromBI(cmat):
@@ -714,7 +729,7 @@ class material_convert_all(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        AutoNode()
+        AutoNode(False, self)
         return {'FINISHED'}
 
 
@@ -732,7 +747,7 @@ class material_convert_selected(bpy.types.Operator):
                 None))
 
     def execute(self, context):
-        AutoNode(True)
+        AutoNode(True, self)
         return {'FINISHED'}
 
 

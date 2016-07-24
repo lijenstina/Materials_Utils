@@ -16,8 +16,14 @@ from bpy.props import *
 CHECK_AUTONODE = False
 
 # collect report for the operator
-# string that has . as separators for splitting into new lines
-COLLECT_REPORT = ""
+# string that has . as delimiters for splitting into new lines
+COLLECT_REPORT = []
+
+
+def collect_report():
+    messages = ".".join(COLLECT_REPORT)
+    bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
+    COLLECT_REPORT = []
 
 
 def AutoNodeOff(operator=None):
@@ -48,9 +54,10 @@ def CheckImagePath(operator=None):
 
 
 def BakingText(tex, mode):
-    print("/n ________________________________________"
+    print("\n________________________________________ \n"
           "INFO start bake texture " + tex.name)
 
+    saved_img_path = None
     bpy.ops.object.mode_set(mode='OBJECT')
     sc = bpy.context.scene
     tmat = ''
@@ -94,8 +101,9 @@ def BakingText(tex, mode):
         sizeX = tex.texture.image.size[0]
         sizeY = tex.texture.image.size[1]
     else:
-        sizeX = 600
-        sizeY = 600
+        bake_size = (int(sc.img_bake_size) if sc.img_bake_size else 1024)
+        sizeX = bake_size
+        sizeY = bake_size
     bpy.ops.image.new(name="TMP_BAKING", width=sizeX, height=sizeY, color=(0.0, 0.0, 0.0, 1.0), alpha=True, float=False)
     bpy.data.screens['UV Editing'].areas[1].spaces[0].image = bpy.data.images["TMP_BAKING"]
     sc.render.engine = 'BLENDER_RENDER'
@@ -103,10 +111,24 @@ def BakingText(tex, mode):
     img = bpy.data.images.get("TMP_BAKING")
     img.file_format = "JPEG"
 
+    path = bpy.path.abspath(sc.conv_path)
+    tex_name = getattr(getattr(tex.texture, "image", None), "name", None)
+    print("tex_name is:", tex_name)
+    texture_name = (tex_name if tex_name else tex.texture.name)
+
     if mode == "ALPHA" and tex.texture.type == 'IMAGE':
-        img.filepath_raw = tex.texture.image.filepath + "_BAKING.jpg"
+        #img.filepath_raw = tex.texture.image.filepath + "_BAKING.jpg"
+        new_tex_name = texture_name + "_BAKING.jpg"
+        img.filepath_raw = path + texture_name + "_BAKING.jpg"
+        print("img.filepath_raw = path + tex_name + _BAKING.jpg is", path + new_tex_name)
+        saved_img_path = img.filepath_raw
+        print("saved_img_path is:", saved_img_path)
     else:
-        img.filepath_raw = tex.texture.name + "_PTEXT.jpg"
+        #img.filepath_raw = tex.texture.name + "_PTEXT.jpg"
+        new_tex_name = texture_name + "_PTEXT.jpg"
+        img.filepath_raw = path + texture_name + "_PTEXT.jpg"
+        saved_img_path = img.filepath_raw
+        print("saved_img_path is:", saved_img_path)
 
     sc.render.bake_type = 'ALPHA'
     sc.render.use_bake_selected_to_active = True
@@ -117,6 +139,7 @@ def BakingText(tex, mode):
     bpy.ops.object.delete()
     bpy.ops.object.select_pattern(extend=False, pattern=Robj.name, case_sensitive=False)
     sc.objects.active = Robj
+    tex.texture.name = new_tex_name
     img.user_clear()
     bpy.data.images.remove(img)
 
@@ -126,14 +149,24 @@ def BakingText(tex, mode):
     # print('INFO : end Bake ' + img.filepath_raw )
     print("________________________________________")
 
+    if saved_img_path:
+        return saved_img_path
+
 
 def AutoNodeInitiate(active=False, operator=None):
-    # Checks for writing privileges by calling CheckImagePath
+    # Checks with bpy.ops.material.check_converter_path
+    # if it is possible to write in the output path
     # if it passes procedes with calling AutoNode
 
-    if CheckImagePath(operator):
+    #if CheckImagePath(operator):
+    print("AutoNodeInitiate is called")
+    check_path = bpy.ops.material.check_converter_path()
+    if 'FINISHED' in check_path:
+        print("if FINISHED in check_path: is passed!!!")
         CHECK_AUTONODE = True
         AutoNode(active, operator)
+    else:
+        warning_messages(operator, 'DIR_PATH_CONVERT')
 
 
 def AutoNode(active=False, operator=None):
@@ -212,7 +245,7 @@ def AutoNode(active=False, operator=None):
             if cmat_is_transp and cmat.raytrace_transparency.ior == 1 and not cmat.raytrace_mirror.use and sM:
                 if not shader.type == 'ShaderNodeBsdfTransparent':
                     print("INFO:  Make TRANSPARENT shader node " + cmat.name)
-                    warning_messages(operator)
+                    #warning_messages(operator)
                     TreeNodes.nodes.remove(shader)
                     shader = TreeNodes.nodes.new('ShaderNodeBsdfTransparent')
                     shader.location = 0, 470
@@ -221,7 +254,7 @@ def AutoNode(active=False, operator=None):
             if not cmat.raytrace_mirror.use and not cmat_is_transp:
                 if not shader.type == 'ShaderNodeBsdfDiffuse':
                     print("INFO:  Make DIFFUSE shader node" + cmat.name)
-                    warning_messages(operator)
+                    #warning_messages(operator)
                     TreeNodes.nodes.remove(shader)
                     shader = TreeNodes.nodes.new('ShaderNodeBsdfDiffuse')
                     shader.location = 0, 470
@@ -230,17 +263,17 @@ def AutoNode(active=False, operator=None):
             if cmat.raytrace_mirror.use and cmat.raytrace_mirror.reflect_factor > 0.001 and cmat_is_transp:
                 if not shader.type == 'ShaderNodeBsdfGlass':
                     print("INFO:  Make GLASS shader node" + cmat.name)
-                    warning_messages(operator)
+                    #warning_messages(operator)
                     TreeNodes.nodes.remove(shader)
                     shader = TreeNodes.nodes.new('ShaderNodeBsdfGlass')
-                    warning_messages(operator)
+                    #warning_messages(operator)
                     shader.location = 0, 470
                     links.new(shader.outputs[0], shout.inputs[0])
 
             if cmat.raytrace_mirror.use and not cmat_is_transp and cmat.raytrace_mirror.reflect_factor > 0.001:
                 if not shader.type == 'ShaderNodeBsdfGlossy':
                     print("INFO:  Make MIRROR shader node" + cmat.name)
-                    warning_messages(operator)
+                    #warning_messages(operator)
                     TreeNodes.nodes.remove(shader)
                     shader = TreeNodes.nodes.new('ShaderNodeBsdfGlossy')
                     shader.location = 0, 520
@@ -250,7 +283,7 @@ def AutoNode(active=False, operator=None):
                 if (not shader.type == 'ShaderNodeEmission' and not
                    cmat.raytrace_mirror.reflect_factor > 0.001 and not cmat_is_transp):
                     print("INFO:  Mix EMISSION shader node" + cmat.name)
-                    warning_messages(operator)
+                    #warning_messages(operator)
                     TreeNodes.nodes.remove(shader)
                     shader = TreeNodes.nodes.new('ShaderNodeEmission')
                     shader.location = 0, 450
@@ -258,7 +291,7 @@ def AutoNode(active=False, operator=None):
                 else:
                     if not Add_Emission:
                         print("INFO:  Add EMISSION shader node" + cmat.name)
-                        warning_messages(operator)
+                        #warning_messages(operator)
                         shout.location = 550, 330
                         Add_Emission = TreeNodes.nodes.new('ShaderNodeAddShader')
                         Add_Emission.location = 370, 490
@@ -277,7 +310,7 @@ def AutoNode(active=False, operator=None):
 
             if cmat.translucency > 0.001:
                 print("INFO:  Add BSDF_TRANSLUCENT shader node" + cmat.name)
-                warning_messages(operator)
+                #warning_messages(operator)
                 shout.location = 770, 330
                 Add_Translucent = TreeNodes.nodes.new('ShaderNodeAddShader')
                 Add_Translucent.location = 580, 490
@@ -328,13 +361,25 @@ def AutoNode(active=False, operator=None):
                                 print('INFO : Extract Procedural Texture  ')
                                 if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
                                    sc.EXTRACT_OW):
-                                    BakingText(tex, 'PTEX')
+                                    baked_name = BakingText(tex, 'PTEX')
+                                    print("tex.texture.name:", tex.texture.name)
+                                    print("baked_name is:", baked_name)
+                                try:
+                                    for image in bpy.data.images:
+                                        print("image.name", image.name)
 
-                                img = bpy.data.images.load(tex.texture.name + "_PTEXT.jpg")
-                                shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
-                                shtext.location = -200, 400
-                                shtext.image = img
-                                sT = True
+                                    #if baked_name in image.name:
+                                    print("image name is :", image.name)
+                                    img = bpy.data.images.load(baked_name)
+                                    #if os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")):
+                                    #img = bpy.data.images.load(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg"))
+                                    shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
+                                    shtext.location = -200, 400
+                                    shtext.image = img
+                                    sT = True
+                                except (ValueError, KeyError, IndexError):
+                                    print("Failure to load baked image")
+
                 if sT:
                     if tex.use_map_color_diffuse:
                         links.new(shtext.outputs[0], shader.inputs[0])
@@ -342,7 +387,7 @@ def AutoNode(active=False, operator=None):
                     if tex.use_map_emit:
                         if not Add_Emission:
                             print("INFO:  Mix EMISSION + Texture shader node " + cmat.name)
-                            warning_messages(operator)
+                            #warning_messages(operator)
 
                             intensity = 0.5 + (tex.emit_factor / 2)
 
@@ -371,7 +416,7 @@ def AutoNode(active=False, operator=None):
                     if tex.use_map_translucency:
                         if not Add_Translucent:
                             print("INFO:  Add Translucency + Texture shader node " + cmat.name)
-                            warning_messages(operator)
+                            #warning_messages(operator)
 
                             intensity = 0.5 + (tex.emit_factor / 2)
 
@@ -398,7 +443,7 @@ def AutoNode(active=False, operator=None):
                     if tex.use_map_alpha:
                         if not Mix_Alpha:
                             print("INFO:  Mix Alpha + Texture shader node " + cmat.name)
-                            warning_messages(operator)
+                            #warning_messages(operator)
 
                             shout.location = 750, 330
                             Mix_Alpha = TreeNodes.nodes.new('ShaderNodeMixShader')

@@ -78,6 +78,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'DIR_PATH_N_ERROR': "ERROR: Directory not existing",
             'DIR_PATH_A_ERROR': "ERROR: Directory not accessible",
             'DIR_PATH_W_OK': "Directory has writing privileges",
+            'DIR_PATH_CONVERT': "Convertion Cancelled. Problem with chosen Directory path",
             'MAT_LINK_ERROR': obj_name + "not be renamed or set as Base(s)",
             'MAT_LINK_NO_NAME': "No Base name given, No changes applied",
             'MOVE_SLOT_UP': obj_name + "been moved on top of the stack",
@@ -85,6 +86,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'MAT_TRNSP_BACK': obj_name + "been set with Alpha connected to Front/Back Geometry node",
             'CONV_NO_OBJ_MAT': obj_name + "has no Materials. Nothing to convert",
             'CONV_NO_SC_MAT': "No Materials in the Scene. Nothing to convert",
+            'CONV_NO_SEL_MAT': "No Materials on Selected Objects. Nothing to convert",
             }
 
         operator.report({'INFO'}, message[warn])
