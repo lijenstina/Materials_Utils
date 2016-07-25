@@ -178,6 +178,8 @@ def AutoNode(active=False, operator=None):
     else:
         mats = bpy.data.materials
 
+    print("mats are", mats)
+
     # No Materials for the chosen action abort
     if not mats:
         CHECK_AUTONODE = False
@@ -190,6 +192,12 @@ def AutoNode(active=False, operator=None):
         return
 
     for cmat in mats:
+        # check for empty material (it will fall through the first check)
+        test_empty = getattr(cmat, "name", None)
+        if test_empty is None:
+            print("an empty material was hit, skipping")
+            continue
+
         cmat.use_nodes = True
         TreeNodes = cmat.node_tree
         links = TreeNodes.links

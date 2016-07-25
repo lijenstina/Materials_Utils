@@ -602,10 +602,16 @@ def AutoNode(active=False, operator=None):
         return
 
     for cmat in materials:
-        cmat.use_nodes = True
-        clearCycleMaterial(cmat)
-        makeBiNodes(cmat)
-        makeCyclesFromBI(cmat)
+        # check for empty material (it will fall through the first check)
+        test_empty = getattr(cmat, "name", None)
+        if test_empty is None:
+            print("an empty material was hit, skipping")
+            continue
+        else:
+            cmat.use_nodes = True
+            clearCycleMaterial(cmat)
+            makeBiNodes(cmat)
+            makeCyclesFromBI(cmat)
 
     COLLECT_REPORT.append("What is going to happen?")
     COLLECT_REPORT.append("Is Blender going to crash?")
