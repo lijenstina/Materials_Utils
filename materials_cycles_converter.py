@@ -146,9 +146,12 @@ def BakingText(tex, mode, tex_type=None):
     bpy.ops.object.select_pattern(extend=False, pattern=Robj.name, case_sensitive=False)
     sc.objects.active = Robj
     tex.texture.name = new_tex_name
-    tex.texture.type = 'IMAGE'
-    if img:
-        tex.texture.image = img
+
+    # if option is checked, keep the texture type for further converts
+    if not sc.EXTRACT_OW:
+        tex.texture.type = 'IMAGE'
+        if img:
+            tex.texture.image = img
 
     if tmat.users == 0:
         bpy.data.materials.remove(tmat)
@@ -168,7 +171,7 @@ def BakingText(tex, mode, tex_type=None):
 
 def AutoNodeInitiate(active=False, operator=None):
     # Checks with bpy.ops.material.check_converter_path
-    # if it is possible to write in the output path
+    # if it's possible to write in the output path
     # if it passes procedes with calling AutoNode
 
     #if CheckImagePath(operator):
