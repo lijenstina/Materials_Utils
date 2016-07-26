@@ -56,7 +56,7 @@ def CheckImagePath(operator=None):
     return True
 
 
-def BakingText(tex, mode):
+def BakingText(tex, mode, tex_type=None):
     print("\n________________________________________ \n"
           "INFO start bake texture " + tex.name)
 
@@ -95,11 +95,6 @@ def BakingText(tex, mode):
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.uv.unwrap()
 
-    #for n in bpy.data.images:
-        #if n.name == 'TMP_BAKING':
-            #n.user_clear()
-            #bpy.data.images.remove(n)
-
     if mode == "ALPHA" and tex.texture.type == 'IMAGE':
         sizeX = tex.texture.image.size[0]
         sizeY = tex.texture.image.size[1]
@@ -118,18 +113,26 @@ def BakingText(tex, mode):
     tex_name = getattr(getattr(tex.texture, "image", None), "name", None)
     print("tex_name is:", tex_name)
     texture_name = (tex_name if tex_name else tex.texture.name)
+    new_tex_name = "baked.jpg"
 
     if mode == "ALPHA" and tex.texture.type == 'IMAGE':
         #img.filepath_raw = tex.texture.image.filepath + "_BAKING.jpg"
         new_tex_name = texture_name + "_BAKING.jpg"
-        img.filepath_raw = path + texture_name + "_BAKING.jpg"
+        img.filepath_raw = path + new_tex_name + "_BAKING.jpg"
         print("img.filepath_raw = path + tex_name + _BAKING.jpg is", path + new_tex_name)
         saved_img_path = img.filepath_raw
         print("saved_img_path is:", saved_img_path)
     else:
-        #img.filepath_raw = tex.texture.name + "_PTEXT.jpg"
-        new_tex_name = texture_name + "_PTEXT.jpg"
-        img.filepath_raw = path + texture_name + "_PTEXT.jpg"
+        if tex_type:
+            if "_PTEXT.jpg" in texture_name[0]:
+                new_tex_name = texture_name
+            else:
+                new_tex_name = tex_type + "_PTEXT.jpg"
+            print("tex_name in Baking_Text is", tex_name)
+        else:
+            #img.filepath_raw = tex.texture.name + "_PTEXT.jpg"
+            new_tex_name = texture_name + "_PTEXT.jpg"
+        img.filepath_raw = path + new_tex_name
         saved_img_path = img.filepath_raw
         print("saved_img_path is:", saved_img_path)
 
@@ -143,11 +146,18 @@ def BakingText(tex, mode):
     bpy.ops.object.select_pattern(extend=False, pattern=Robj.name, case_sensitive=False)
     sc.objects.active = Robj
     tex.texture.name = new_tex_name
-    img.user_clear()
-    bpy.data.images.remove(img)
+    tex.texture.type = 'IMAGE'
+    if img:
+        tex.texture.image = img
 
     if tmat.users == 0:
         bpy.data.materials.remove(tmat)
+
+    # clean up baked textures
+    for n in bpy.data.images:
+        if n.name == 'TMP_BAKING':
+            n.user_clear()
+            bpy.data.images.remove(n)
 
     # print('INFO : end Bake ' + img.filepath_raw )
     print("________________________________________")
@@ -242,12 +252,17 @@ def AutoNode(active=False, operator=None):
                             if (not
                                os.path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.jpg")) or
                                sc.EXTRACT_OW):
+                                print("if tex.texture.type == 'IMAGE' and tex.texture.use_alpha: was hit")
                                 BakingText(tex, 'ALPHA')
                         else:
                             if not tex.texture.type == 'IMAGE':
+                                print("not os.path.exists(bpy.path.abspath(tex.texture.name + _PTEXT.jpg is:",
+                                 not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")))
                                 if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
                                    sc.EXTRACT_OW):
-                                    BakingText(tex, 'PTEXT')
+                                    tex_type = tex.texture.type.lower()
+                                    print("tex_name = texture.type.lower() is: ", tex_type)
+                                    BakingText(tex, 'PTEXT', tex_type)
 
             cmat_is_transp = cmat.use_transparency and cmat.alpha < 1
 
@@ -385,11 +400,12 @@ def AutoNode(active=False, operator=None):
 
                             if tex.texture.type == 'IMAGE':
                                 img = tex.texture.image
+                                img_name = (img.name if hasattr(img, "name") else "Image")
                                 shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
                                 shtext.location = tex_node_loc
                                 shtext.image = img
-                                shtext.name = img.name
-                                shtext.label = "Image " + img.name
+                                shtext.name = img_name
+                                shtext.label = "Image " + img_name
                                 if node_frame:
                                     shtext.parent = node_frame
                                 sT = True
@@ -399,19 +415,23 @@ def AutoNode(active=False, operator=None):
                                     print('INFO : Extract Procedural Texture  ')
                                     if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
                                        sc.EXTRACT_OW):
-                                        baked_name = BakingText(tex, 'PTEX')
-                                        print("tex.texture.name:", tex.texture.name)
+                                        print("not os.path.exists(bpy.path.abspath(tex.texture.name + _PTEXT.jpg is:",
+                                              not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")))
+                                        tex_type = tex.texture.type.lower()
+                                        baked_name = BakingText(tex, 'PTEX', tex_type)
+                                        print("tex.texture.name is %s, tex_name is: %s" %(tex.texture.name, tex_type))
                                         print("baked_name is:", baked_name)
                                     try:
                                         for image in bpy.data.images:
                                             print("image.name", image.name)
 
                                         img = bpy.data.images.load(baked_name)
+                                        img_name = (img.name if hasattr(img, "name") else "Image")
                                         shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
                                         shtext.location = tex_node_loc
                                         shtext.image = img
-                                        shtext.label = "Baked Image " + img.name
-                                        shtext.name = img.name
+                                        shtext.name = img_name
+                                        shtext.label = "Baked Image " + img_name
                                         shtext.use_custom_color = True
                                         shtext.color = NODE_COLOR
                                         if node_frame:
@@ -523,6 +543,9 @@ def AutoNode(active=False, operator=None):
 
     bpy.context.scene.render.engine = 'CYCLES'
 
+
+# -----------------------------------------------------------------------------
+# Operator Classes #
 
 class mllock(bpy.types.Operator):
     bl_idname = "ml.lock"

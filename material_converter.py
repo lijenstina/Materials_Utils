@@ -728,6 +728,9 @@ def makeCyclesFromBI(cmat):
         texCoordNode.location = Vector((minPosX, avgPosY))
 
 
+# -----------------------------------------------------------------------------
+# Operator Classes #
+
 class material_convert_all(bpy.types.Operator):
     bl_idname = "xps_tools.convert_to_cycles_all"
     bl_label = "Convert All Materials"
