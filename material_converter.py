@@ -56,17 +56,6 @@ def collect_report(collection="", is_final=False):
         COLLECT_REPORT = []
 
 
-def AutoNodeSwitch(switch="OFF", operator=None):
-    mats = bpy.data.materials
-    use_nodes = (True if switch in ("ON") else False)
-    warn_message = ('BI_SW_NODES_OFF' if switch in ("ON") else 'BI_SW_NODES_ON')
-    for cmat in mats:
-        cmat.use_nodes = use_nodes
-    bpy.context.scene.render.engine = 'BLENDER_RENDER'
-    if operator:
-        warning_messages(operator, warn_message)
-
-
 def makeTextureNodeDict(cmat):
     global nodesDictionary
     nodesDictionary = {}
@@ -757,17 +746,6 @@ class material_convert_selected(bpy.types.Operator):
 
     def execute(self, context):
         AutoNode(True, self)
-        return {'FINISHED'}
-
-
-class material_restore_bi(bpy.types.Operator):
-    bl_idname = "xps_tools.restore_bi_materials_all"
-    bl_label = "Restore Blender Internal Materials"
-    bl_description = "Switch to Blender Internal Render \n Nodes On"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context):
-        AutoNodeSwitch("ON", self)
         return {'FINISHED'}
 
 

@@ -5,6 +5,7 @@
 import bpy
 import os
 from os import path, access
+from bpy.props import BoolProperty
 from .warning_messages_utils import warning_messages
 
 # -----------------------------------------------------------------------------
@@ -42,7 +43,7 @@ def collect_report(collection="", is_final=False):
 def AutoNodeSwitch(switch="OFF", operator=None):
     mats = bpy.data.materials
     use_nodes = (True if switch in ("ON") else False)
-    warn_message = ('BI_SW_NODES_OFF' if switch in ("ON") else 'BI_SW_NODES_ON')
+    warn_message = ('BI_SW_NODES_ON' if switch in ("ON") else 'BI_SW_NODES_OFF')
     for cmat in mats:
         cmat.use_nodes = use_nodes
     bpy.context.scene.render.engine = 'BLENDER_RENDER'
@@ -594,13 +595,21 @@ class mlrefresh_active(bpy.types.Operator):
 
 class mlrestore(bpy.types.Operator):
     bl_idname = "ml.restore"
-    bl_label = "Restore"
-    bl_description = ("Switch Back to Blender Internal \n"
-                      "Use Nodes Off")
+    bl_label = "Restore Blender Internal Materials"
+    bl_description = "Switch to Blender Internal Render"
     bl_options = {'REGISTER', 'UNDO'}
 
+    switcher = BoolProperty(
+            name="Use Nodes",
+            description="When restoring, switch Use Nodes On/Off",
+            default=True
+            )
+
     def execute(self, context):
-        AutoNodeSwitch("OFF", self)
+        if self.switcher:
+            AutoNodeSwitch("ON", self)
+        else:
+            AutoNodeSwitch("OFF", self)
         return {'FINISHED'}
 
 

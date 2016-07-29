@@ -1525,10 +1525,11 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
 
         if c_render_engine("Cycles"):
             if (enable_converters() is True and converter_type('BI_CONV')):
-                layout.operator("ml.restore", text='BI Nodes Off', icon="BLENDER")
-                layout.operator("xps_tools.restore_bi_materials_all",
+                layout.operator("ml.restore",
+                                text='BI Nodes Off', icon="BLENDER").switcher = False
+                layout.operator("ml.restore",
                                 text='BI Nodes On',
-                                icon="APPEND_BLEND")
+                                icon="APPEND_BLEND").switcher = True
                 use_separator(self, context)
         elif c_render_engine("BI"):
             if (enable_converters() is True and converter_type('CYC_CONV')):
@@ -1681,7 +1682,7 @@ class MATERIAL_PT_scenemassive(bpy.types.Panel):
                        text="Convert Active to Cycles", icon='MATERIAL')
         box = box.box()
         box.operator("ml.restore",
-                     text="To BI Nodes Off", icon='MATERIAL')
+                     text="To BI Nodes Off", icon='MATERIAL').switcher = False
 
         row = layout.row()
         box = row.box()
@@ -1724,8 +1725,8 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
         col = layout.column()
         row = col.row()
         box = row.box()
-        box.operator("xps_tools.restore_bi_materials_all",
-                     text="To BI Nodes On", icon="TEXTURE")
+        box.operator("ml.restore",
+                     text="To BI Nodes On", icon="TEXTURE").switcher = True
         box = row.box()
         box.menu("help.nodeconvert",
                  text="Usage Information Guide", icon="MOD_EXPLODE")
