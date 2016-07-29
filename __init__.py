@@ -47,13 +47,12 @@ else:
 import bpy
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 from .warning_messages_utils import warning_messages
-
 import os
 from os import path, access
 
-# flag for checking path OS writing
-CHK_VALID_PATH = True
 
+# -----------------------------------------------------------------------------
+# Functions #
 
 def fake_user_set(fake_user='ON', materials='UNUSED', operator=None):
     warn_mesg, w_mesg = '', ""
@@ -1370,13 +1369,12 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
 
     def check_valid_path(self, context):
         sc = context.scene
-        path = bpy.path.abspath(sc.conv_path)
-        print("Testing Directory Path: ", path)
+        paths = bpy.path.abspath(sc.conv_path)
 
-        if os.path.exists(path):
-            if os.access(path, os.W_OK | os.X_OK):
+        if os.path.exists(paths):
+            if os.access(paths, os.W_OK | os.X_OK):
                 try:
-                    path_test = os.path.join(path, "XYfoobartestXY.txt")
+                    path_test = os.path.join(paths, "XYfoobartestXY.txt")
                     with open(path_test, 'w') as f:
                         f.closed
                     os.remove(path_test)
@@ -1395,17 +1393,15 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
 
     def execute(self, context):
         if not self.check_valid_path(context):
-            CHK_VALID_PATH = False
             return {'CANCELLED'}
         else:
-            CHK_VALID_PATH = True
             warning_messages(self, 'DIR_PATH_W_OK')
 
         return {'FINISHED'}
 
 
 # -----------------------------------------------------------------------------
-# menu classes #
+# Menu classes #
 
 class VIEW3D_MT_assign_material(bpy.types.Menu):
     bl_label = "Assign Material"
@@ -1714,7 +1710,6 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
         return (enable_converters() is True and converter_type('CYC_CONV'))
 
     def draw(self, context):
-        sc = context.scene
         layout = self.layout
         row = layout.row()
         box = row.box()
@@ -1808,8 +1803,7 @@ class material_converter_report(bpy.types.Operator):
         box.label(text="Converter Report", icon='INFO')
 
         if self.message and type(self.message) is str:
-            list_string = self.message.split(".")
-            print("list_string is:", list_string)
+            list_string = self.message.split("*")
             for line in range(len(list_string)):
                 box.label(text=str(list_string[line]))
 

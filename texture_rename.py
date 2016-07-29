@@ -1,6 +1,5 @@
 import bpy
 from bpy.props import StringProperty
-from . import warning_messages_utils
 from .warning_messages_utils import warning_messages
 
 
@@ -26,7 +25,6 @@ class SimpleOp(bpy.types.Operator):
 
             box.prop(self, "named", text="Name pattern", icon="SYNTAX_ON")
             layout.separator()
-
             boxs = layout.box()
             boxs.prop_search(self, "named", bpy.data, "textures")
         else:
@@ -86,13 +84,13 @@ class HWPl(bpy.types.Panel):
 
 
 def register():
-    bpy.utils.register_class(HWPl)
-    bpy.utils.register_class(SimpleOp)
+    bpy.utils.register_module(__name__)
+    pass
 
 
 def unregister():
-    bpy.utils.unregister_class(HWPl)
-    bpy.utils.unregister_class(SimpleOp)
+    bpy.utils.unregister_module(__name__)
+    pass
 
 if __name__ == "__main__":
     register()

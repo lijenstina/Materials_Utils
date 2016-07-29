@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import bpy
-import math
-from math import (log, pow, exp)
+import mathutils
 from mathutils import Vector
 import os.path
-from bpy.props import *
 from .warning_messages_utils import warning_messages
 
+# -----------------------------------------------------------------------------
+# Globals #
+
 nodesDictionary = None
+# collect report for the operator
+# string that has * as delimiters for splitting into new lines
+COLLECT_REPORT = []
+
 
 NODE_FRAME = 'NodeFrame'
 BI_MATERIAL_NODE = 'ShaderNodeMaterial'
@@ -28,43 +33,45 @@ BSDF_TRANSPARENT_NODE = 'ShaderNodeBsdfTransparent'
 BSDF_GLOSSY_NODE = 'ShaderNodeBsdfGlossy'
 BSDF_GLASS_NODE = 'ShaderNodeBsdfGlass'
 
-sceneContext = bpy.types.Scene
 textureNodeSizeX = 150
 textureNodeSizeY = 350
 
-# collect report for the operator
-# string that has . as delimiters for splitting into new lines
-COLLECT_REPORT = []
+
+# -----------------------------------------------------------------------------
+# Functions #
+
+def collect_report(collection="", is_final=False):
+    # collection passes a string for appending to COLLECT_REPORT global
+    # is_final swithes to the final report with the operator in __init__
+    global COLLECT_REPORT
+
+    if collection and type(collection) is str:
+        COLLECT_REPORT.append(collection)
+        print(collection)
+
+    if is_final:
+        # final operator pass uses * as delimiter for splitting into new lines
+        messages = "*".join(COLLECT_REPORT)
+        bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
+        COLLECT_REPORT = []
 
 
-def collect_report():
-    messages = ".".join(COLLECT_REPORT)
-    bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
-
-
-def AutoNodeOff(operator=None):
+def AutoNodeSwitch(switch="OFF", operator=None):
     mats = bpy.data.materials
+    use_nodes = (True if switch in ("ON") else False)
+    warn_message = ('BI_SW_NODES_OFF' if switch in ("ON") else 'BI_SW_NODES_ON')
     for cmat in mats:
-        cmat.use_nodes = False
+        cmat.use_nodes = use_nodes
     bpy.context.scene.render.engine = 'BLENDER_RENDER'
     if operator:
-        warning_messages(operator, 'BI_SW_NODES_OFF')
-
-
-def AutoNodeOn(operator=None):
-    mats = bpy.data.materials
-    for cmat in mats:
-        cmat.use_nodes = True
-    bpy.context.scene.render.engine = 'BLENDER_RENDER'
-    if operator:
-        warning_messages(operator, 'BI_SW_NODES_ON')
+        warning_messages(operator, warn_message)
 
 
 def makeTextureNodeDict(cmat):
     global nodesDictionary
-    sceneContext = bpy.context.scene
     nodesDictionary = {}
     textures = {textureSlot.texture for textureSlot in cmat.texture_slots if textureSlot}
+
     for tex in textures:
         texNode = None
         if tex.type == 'IMAGE':
@@ -138,7 +145,6 @@ def makeImageTextureNode(TreeNodes, img):
 
 
 def makeNodeUsingImage1(cmat, texture):
-    sceneContext = bpy.context.scene
     TreeNodes = cmat.node_tree
     img = texture.image
     texNode = makeImageTextureNode(TreeNodes, img)
@@ -232,7 +238,8 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
     for textureIdx, textureSlot in enumerate(textureSlots):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
-            # print('Generating {} Nodes:'.format(groupName), texNode.image)
+            tex_node_name = getattr(texNode.image, "name", "")
+            collect_report("INFO: Generating {} Nodes: ".format(groupName) + tex_node_name)
             texNode.parent = diffuseFrame
             placeNode(texNode, -500 - ((texCount - 1) * 200),
                       currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
@@ -289,7 +296,8 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
     for textureIdx, textureSlot in enumerate(textureSlots):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
-            # print('Generating Transparency Nodes:', texNode.image)
+            tex_node_name = getattr(texNode.image, "name", "")
+            collect_report("INFO: Generating Transparency Nodes: " + texNode.image)
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
             if textureSlot.use and textureIdx > 0:
@@ -332,7 +340,8 @@ def createNormalNodes(cmat, texCoordNode, mainShader, materialOutput):
     for textureIdx, textureSlot in enumerate(textureSlots):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
-            # print('Generating Normal Nodes:', texNode.image)
+            tex_node_name = getattr(texNode.image, "name", "")
+            collect_report("INFO: Generating Normal Nodes: " + texNode.image)
             texNode.parent = normalFrame
             placeNode(texNode, -500 - ((texCount) * 200), currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
 
@@ -403,7 +412,8 @@ def createSpecularNodes(cmat, texCoordNode, mainShader, mainDiffuse, materialOut
     for textureIdx, textureSlot in enumerate(textureSlots):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
-            # print('Generating {} Nodes:'.format(groupName), texNode.image)
+            tex_node_name = getattr(texNode.image, "name", "")
+            collect_report("INFO: Generating {} Nodes:".format(groupName) + tex_node_name)
             texNode.parent = specularFrame
             placeNode(texNode, -500 - ((texCount) * 200), currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
 
@@ -498,7 +508,8 @@ def createEmissionNodes(cmat, texCoordNode, mainShader, materialOutput):
     for textureIdx, textureSlot in enumerate(textureSlots):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
-            # print('Generating {} Nodes:'.format(groupName), texNode.image)
+            tex_node_name = getattr(texNode.image, "name", "")
+            collect_report("INFO: Generating {} Nodes:".format(groupName) + tex_node_name)
             texNode.parent = emissionFrame
             placeNode(texNode, -500 - ((texCount) * 200), currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
 
@@ -579,11 +590,11 @@ def hasAlphaTex(cmat):
 
 
 def AutoNode(active=False, operator=None):
+    global COLLECT_REPORT
     COLLECT_REPORT = []
-    print("\n________________________________________ \n"
-          "*** START CYCLES CONVERSION ***")
 
-    sceneContext = bpy.context.scene
+    collect_report("________________________________________")
+    collect_report("START CYCLES CONVERSION")
 
     if active:
         materials = [mat for obj in bpy.context.selected_objects if
@@ -591,9 +602,8 @@ def AutoNode(active=False, operator=None):
     else:
         materials = bpy.data.materials
 
-    # No Materials for the chosen action abort
+    # No Materials for the chosen action - abort
     if not materials:
-        CHECK_AUTONODE = False
         if operator:
             if active:
                 warning_messages(operator, 'CONV_NO_SEL_MAT')
@@ -605,7 +615,7 @@ def AutoNode(active=False, operator=None):
         # check for empty material (it will fall through the first check)
         test_empty = getattr(cmat, "name", None)
         if test_empty is None:
-            print("an empty material was hit, skipping")
+            collect_report("An empty material was hit, skipping")
             continue
         else:
             cmat.use_nodes = True
@@ -613,34 +623,23 @@ def AutoNode(active=False, operator=None):
             makeBiNodes(cmat)
             makeCyclesFromBI(cmat)
 
-    COLLECT_REPORT.append("What is going to happen?")
-    COLLECT_REPORT.append("Is Blender going to crash?")
-    COLLECT_REPORT.append("DUN DUN")
-
-    messages = ".".join(COLLECT_REPORT)
-    bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
+    collect_report("Conversion finished !", True)
 
     bpy.context.scene.render.engine = 'CYCLES'
 
 
-
 def makeCyclesFromBI(cmat):
-    print('Converting Material:', cmat.name)
-    texNodes = []
+    mat_name = getattr(cmat, "name", "NO NAME")
+    collect_report("Converting Material: " + mat_name)
+
+    global nodesDictionary
     TreeNodes = cmat.node_tree
     links = TreeNodes.links
 
     # Convert this material from non-nodes to Cycles nodes
-
     mainShader = None
     mainDiffuse = None
-    shmix = None
-    shtsl = None
-    addShader = None
-    Add_Translucent = None
     Mix_Alpha = None
-
-    # extractAlphaTextures(cmat)
 
     tex_is_transp = hasAlphaTex(cmat)
 
@@ -651,13 +650,12 @@ def makeCyclesFromBI(cmat):
     cmat_transp_ray = cmat_use_transp and cmat_trans_method == 'RAYTRACE' and cmat_ior == 1
     cmat_mirror = cmat.raytrace_mirror.use
     cmat_mirror_fac = cmat.raytrace_mirror.reflect_factor
-    cmat_emision_fac = cmat.emit
-    cmat_translucency_fac = cmat.translucency
 
-    # /////////////////////////////////////
+    # --------------------------------------
     # Material Shaders
     # Diffuse nodes
-    # /////////////////////////////////////
+    # --------------------------------------
+
     # Make Diffuse and Output nodes
     mainShader = makeMainShader(TreeNodes)
     mainShader.inputs['Roughness'].default_value = cmat.specular_intensity
@@ -670,7 +668,7 @@ def makeCyclesFromBI(cmat):
 
     # Material Transparent
     if not cmat_mirror and cmat_use_transp and tex_is_transp and (cmat_transp_z or cmat_transp_ray):
-        # print("INFO:  Make TRANSPARENT material nodes:", cmat.name)
+        collect_report("INFO:  Make TRANSPARENT material nodes: " + cmat.name)
         Mix_Alpha = TreeNodes.nodes.new(SHADER_MIX_NODE)
         Mix_Alpha.name = 'Alpha Mix Shader'
         Mix_Alpha.location = materialOutput.location
@@ -686,7 +684,7 @@ def makeCyclesFromBI(cmat):
 
     # Material Glass
     if cmat_mirror and cmat_mirror_fac > 0.001 and cmat_is_transp:
-        # print("INFO:  Make GLASS shader node" + cmat.name)
+        collect_report("INFO:  Make GLASS shader node: " + cmat.name)
         newShader = TreeNodes.nodes.new(BSDF_GLASS_NODE)
         replaceNode(shader, newShader)
         TreeNodes.nodes.remove(shader)
@@ -694,14 +692,15 @@ def makeCyclesFromBI(cmat):
 
     # Material Mirror
     if cmat_mirror and cmat_mirror_fac > 0.001 and not cmat_is_transp:
-        # print("INFO:  Make MIRROR shader node" + cmat.name)
+        collect_report("INFO:  Make MIRROR shader node: " + cmat.name)
         newShader = TreeNodes.nodes.new(BSDF_GLOSSY_NODE)
         replaceNode(shader, newShader)
         TreeNodes.nodes.remove(shader)
         shader = newShader
 
     nodesDictionary = makeTextureNodeDict(cmat)
-    # /////////////////////////////////////
+
+    # --------------------------------------
     # Texture nodes
 
     # BI Material to Cycles - Diffuse Textures
@@ -720,6 +719,7 @@ def makeCyclesFromBI(cmat):
     # list all nodes conected to outputs
     mappingNodes = [link.to_node for output in texCoordNode.outputs for link in output.links]
     mappingNodesCount = len(mappingNodes)
+
     if mappingNodes:
         xList = [node.location.x for node in mappingNodes]
         yList = [node.location.y for node in mappingNodes]
@@ -767,7 +767,7 @@ class material_restore_bi(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        AutoNodeOn(self)
+        AutoNodeSwitch("ON", self)
         return {'FINISHED'}
 
 

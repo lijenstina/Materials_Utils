@@ -1,7 +1,7 @@
 import bpy
 
-
 MAT_SPEC_NAME = "materials_specials"
+
 
 def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None, fake=""):
     # Enter warning messages to the message dictionary
