@@ -239,7 +239,7 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
             tex_node_name = getattr(texNode.image, "name", "")
-            collect_report("INFO: Generating {} Nodes: ".format(groupName) + tex_node_name)
+            collect_report("INFO: Generating {} Nodes for: ".format(groupName) + tex_node_name)
             texNode.parent = diffuseFrame
             placeNode(texNode, -500 - ((texCount - 1) * 200),
                       currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
@@ -297,7 +297,7 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
             tex_node_name = getattr(texNode.image, "name", "")
-            collect_report("INFO: Generating Transparency Nodes: " + texNode.image)
+            collect_report("INFO: Generating Transparency Nodes for: " + tex_node_name)
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
             if textureSlot.use and textureIdx > 0:
@@ -341,7 +341,7 @@ def createNormalNodes(cmat, texCoordNode, mainShader, materialOutput):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
             tex_node_name = getattr(texNode.image, "name", "")
-            collect_report("INFO: Generating Normal Nodes: " + texNode.image)
+            collect_report("INFO: Generating Normal Nodes for: " + tex_node_name)
             texNode.parent = normalFrame
             placeNode(texNode, -500 - ((texCount) * 200), currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
 
@@ -413,7 +413,7 @@ def createSpecularNodes(cmat, texCoordNode, mainShader, mainDiffuse, materialOut
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
             tex_node_name = getattr(texNode.image, "name", "")
-            collect_report("INFO: Generating {} Nodes:".format(groupName) + tex_node_name)
+            collect_report("INFO: Generating {} Nodes for: ".format(groupName) + tex_node_name)
             texNode.parent = specularFrame
             placeNode(texNode, -500 - ((texCount) * 200), currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
 
@@ -509,7 +509,7 @@ def createEmissionNodes(cmat, texCoordNode, mainShader, materialOutput):
         texNode = getTexNodeDic(textureSlot.texture)
         if texNode:
             tex_node_name = getattr(texNode.image, "name", "")
-            collect_report("INFO: Generating {} Nodes:".format(groupName) + tex_node_name)
+            collect_report("INFO: Generating {} Nodes for: ".format(groupName) + tex_node_name)
             texNode.parent = emissionFrame
             placeNode(texNode, -500 - ((texCount) * 200), currPosY, textureNodeSizeX, textureNodeSizeY, 0, textureIdx)
 
