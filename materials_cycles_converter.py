@@ -51,27 +51,19 @@ def AutoNodeSwitch(switch="OFF", operator=None):
         warning_messages(operator, warn_message)
 
 
-def CheckImagePath(operator=None):
-    for image in bpy.data.images:
-        if image:
-            paths = bpy.path.abspath(image.filepath)
-            if os.path.exists(paths):
-                if (os.access(os.path.dirname(paths), os.R_OK) and
-                   os.access(paths, os.R_OK)):
-                    continue
-                else:
-                    warning_messages(operator, 'TEX_D_T_ERROR', image.name, "FILE")
-                    return False
-            else:
-                warning_messages(operator, 'TEX_PATH_ERROR', image.name, "FILE")
-                return False
-        return False
-    return True
+def SetFakeUserTex():
+    images = bpy.data.images
+    for image in images:
+        has_user = getattr(image, "users", -1)
+        image_name = getattr(image, "name", "NONAME")
+
+        if has_user == 0:
+            image.use_fake_user = True
+            collect_report("INFO: Set fake user for unused image: " + image_name)
 
 
 def BakingText(tex, mode, tex_type=None):
     collect_report("INFO: start bake texture named: " + tex.name)
-
     saved_img_path = None
     bpy.ops.object.mode_set(mode='OBJECT')
     sc = bpy.context.scene
@@ -114,30 +106,35 @@ def BakingText(tex, mode, tex_type=None):
         bake_size = (int(sc.img_bake_size) if sc.img_bake_size else 1024)
         sizeX = bake_size
         sizeY = bake_size
-    bpy.ops.image.new(name="TMP_BAKING", width=sizeX, height=sizeY, color=(0.0, 0.0, 0.0, 1.0), alpha=True, float=False)
+    bpy.ops.image.new(name="TMP_BAKING", width=sizeX, height=sizeY,
+                      color=(0.0, 0.0, 0.0, 1.0), alpha=True, float=False)
     bpy.data.screens['UV Editing'].areas[1].spaces[0].image = bpy.data.images["TMP_BAKING"]
     sc.render.engine = 'BLENDER_RENDER'
     img = bpy.data.images["TMP_BAKING"]
     img = bpy.data.images.get("TMP_BAKING")
-    img.file_format = "JPEG"
+    img.file_format = ("JPEG" if not mode == "ALPHA" else "PNG")
 
     paths = bpy.path.abspath(sc.conv_path)
     tex_name = getattr(getattr(tex.texture, "image", None), "name", None)
     texture_name = (tex_name if tex_name else tex.texture.name)
-    new_tex_name = "baked.jpg"
+    new_tex_name = "baked"
+    new_appendix = (".jpg" if not mode == "ALPHA" else ".png")
 
     if mode == "ALPHA" and tex.texture.type == 'IMAGE':
-        new_tex_name = texture_name + "_BAKING.jpg"
-        img.filepath_raw = paths + new_tex_name + "_BAKING.jpg"
+        if "_BAKING." in texture_name[0]:
+            new_tex_name = texture_name + new_appendix
+        else:
+            new_tex_name = texture_name + "_BAKING" + new_appendix
+        img.filepath_raw = paths + new_tex_name
         saved_img_path = img.filepath_raw
     else:
         if tex_type:
-            if "_PTEXT.jpg" in texture_name[0]:
-                new_tex_name = texture_name
+            if "_PTEXT." in texture_name[0]:
+                new_tex_name = texture_name + new_appendix
             else:
-                new_tex_name = tex_type + "_PTEXT.jpg"
+                new_tex_name = tex_type + "_PTEXT" + new_appendix
         else:
-            new_tex_name = texture_name + "_PTEXT.jpg"
+            new_tex_name = texture_name + "_PTEXT" + new_appendix
         img.filepath_raw = paths + new_tex_name
         saved_img_path = img.filepath_raw
 
@@ -179,12 +176,15 @@ def AutoNodeInitiate(active=False, operator=None):
 
     # if CheckImagePath(operator):
     check_path = bpy.ops.material.check_converter_path()
+    sc = bpy.context.scene
     global COLLECT_REPORT, CHECK_AUTONODE
 
     if 'FINISHED' in check_path:
         COLLECT_REPORT = []
         CHECK_AUTONODE = True
         AutoNode(active, operator)
+        if sc.SET_FAKE_USER:
+            SetFakeUserTex()
         collect_report("Conversion finished !", True)
     else:
         warning_messages(operator, 'DIR_PATH_CONVERT')
@@ -247,33 +247,7 @@ def AutoNode(active=False, operator=None):
             shout.location = 200, 400
             links.new(shader.outputs[0], shout.inputs[0])
 
-            sM = True
-            for tex in cmat.texture_slots:
-                ma_alpha = getattr(getattr(tex, "use", None), "use_map_alpha", None)
-                if ma_alpha:
-                    sM = False
-                    if sc.EXTRACT_ALPHA:
-                        if tex.texture.type == 'IMAGE' and tex.texture.use_alpha:
-                            if (not
-                               os.path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.jpg")) or
-                               sc.EXTRACT_OW):
-                                BakingText(tex, 'ALPHA')
-                        else:
-                            if not tex.texture.type == 'IMAGE':
-                                if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
-                                   sc.EXTRACT_OW):
-                                    tex_type = tex.texture.type.lower()
-                                    BakingText(tex, 'PTEXT', tex_type)
-
             cmat_is_transp = cmat.use_transparency and cmat.alpha < 1
-
-            if cmat_is_transp and cmat.raytrace_transparency.ior == 1 and not cmat.raytrace_mirror.use and sM:
-                if not shader.type == 'ShaderNodeBsdfTransparent':
-                    collect_report("INFO: Make TRANSPARENT shader node " + cmat.name)
-                    TreeNodes.nodes.remove(shader)
-                    shader = TreeNodes.nodes.new('ShaderNodeBsdfTransparent')
-                    shader.location = 0, 470
-                    links.new(shader.outputs[0], shout.inputs[0])
 
             if not cmat.raytrace_mirror.use and not cmat_is_transp:
                 if not shader.type == 'ShaderNodeBsdfDiffuse':
@@ -302,6 +276,7 @@ def AutoNode(active=False, operator=None):
             if cmat.emit > 0.001:
                 if (not shader.type == 'ShaderNodeEmission' and not
                    cmat.raytrace_mirror.reflect_factor > 0.001 and not cmat_is_transp):
+
                     collect_report("INFO: Mix EMISSION shader node for: " + cmat.name)
                     TreeNodes.nodes.remove(shader)
                     shader = TreeNodes.nodes.new('ShaderNodeEmission')
@@ -344,9 +319,13 @@ def AutoNode(active=False, operator=None):
                 else:
                     links.new(shader.outputs[0], Add_Translucent.inputs[0])
                     pass
-                shtsl.inputs['Color'].default_value = cmat.translucency, cmat.translucency, cmat.translucency, 1
+                shtsl.inputs['Color'].default_value = (cmat.translucency,
+                                                       cmat.translucency,
+                                                       cmat.translucency, 1)
 
-            shader.inputs['Color'].default_value = cmat.diffuse_color.r, cmat.diffuse_color.g, cmat.diffuse_color.b, 1
+            shader.inputs['Color'].default_value = (cmat.diffuse_color.r,
+                                                    cmat.diffuse_color.g,
+                                                    cmat.diffuse_color.b, 1)
 
             if shader.type == 'ShaderNodeBsdfDiffuse':
                 shader.inputs['Roughness'].default_value = cmat.specular_intensity
@@ -381,60 +360,94 @@ def AutoNode(active=False, operator=None):
                 # count the number of texture nodes created
                 # for spreading a bit the texture nodes
                 row_node, col_node = -1, False
+                sM = True
+                baked_path = None
 
                 for tex in cmat.texture_slots:
                     sT = False
-                    if tex:
-                        if tex.use:
-                            row_node = (row_node + 1 if not col_node else row_node)
-                            col_node = not col_node
-                            tex_node_loc = -(200 + (row_node * 150)), (400 if col_node else 650)
+                    tex_use = getattr(tex, "use", None)
+                    if tex_use:
+                        row_node = (row_node + 1 if not col_node else row_node)
+                        col_node = not col_node
+                        tex_node_loc = -(200 + (row_node * 150)), (400 if col_node else 650)
+                        ma_alpha = getattr(tex, "use_map_alpha", None)
+                        sM = (False if ma_alpha else True)
 
-                            if tex.texture.type == 'IMAGE':
-                                img = tex.texture.image
-                                img_name = (img.name if hasattr(img, "name") else "Image")
+                        if tex.texture.type == 'IMAGE':
+                            if sc.EXTRACT_ALPHA and tex.texture.use_alpha:
+                                if (not
+                                   os.path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.png")) or
+                                   sc.EXTRACT_OW):
+                                    baked_path = BakingText(tex, 'ALPHA')
+                            try:
+                                if baked_path:
+                                    img = bpy.data.images.load(baked_path)
+                                    collect_report("Loading Baked texture path:")
+                                    collect_report(baked_path)
+                                else:
+                                    img = tex.texture.image
+
+                                img_name = (img.name if hasattr(img, "name") else "NO NAME")
                                 shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
                                 shtext.location = tex_node_loc
                                 shtext.image = img
                                 shtext.name = img_name
                                 shtext.label = "Image " + img_name
+                                if baked_path:
+                                    shtext.use_custom_color = True
+                                    shtext.color = NODE_COLOR
                                 collect_report("Creating Image Node for image " + img_name)
                                 if node_frame:
                                     shtext.parent = node_frame
                                 sT = True
+                            except:
+                                collect_report("ERROR: A problem occured with loading an image for {} "
+                                               "(possibly missing)".format(tex.texture.name))
+                        else:
+                            if sc.EXTRACT_PTEX or (sc.EXTRACT_ALPHA and ma_alpha):
+                                if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
+                                   sc.EXTRACT_OW):
+                                    tex_type = tex.texture.type.lower()
+                                    collect_report("Attempting to Extract Procedural Texture type: " + tex_type)
+                                    baked_path = BakingText(tex, 'PTEX', tex_type)
+                                try:
+                                    img = bpy.data.images.load(baked_path)
+                                    collect_report("Loading Baked texture path:")
+                                    collect_report(baked_path)
+                                    img_name = (img.name if hasattr(img, "name") else "NO NAME")
+                                    shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
+                                    shtext.location = tex_node_loc
+                                    shtext.image = img
+                                    shtext.name = img_name
+                                    shtext.label = "Baked Image " + img_name
+                                    shtext.use_custom_color = True
+                                    shtext.color = NODE_COLOR
+                                    collect_report("Creating Image Node for baked image: " + img_name)
+                                    if node_frame:
+                                        shtext.parent = node_frame
+                                    sT = True
+                                except:
+                                    collect_report("ERROR: Failure to load baked image: " + baked_name)
 
-                            if not tex.texture.type == 'IMAGE':
-                                if sc.EXTRACT_PTEX:
-                                    if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
-                                       sc.EXTRACT_OW):
-                                        tex_type = tex.texture.type.lower()
-                                        collect_report("Attempting to Extract Procedural Texture type: " + tex_type)
-                                        baked_name = BakingText(tex, 'PTEX', tex_type)
-                                    try:
-                                        img = bpy.data.images.load(baked_name)
-                                        collect_report("Loading Baked texture path:")
-                                        collect_report(baked_name)
-                                        img_name = (img.name if hasattr(img, "name") else "Image")
-                                        shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
-                                        shtext.location = tex_node_loc
-                                        shtext.image = img
-                                        shtext.name = img_name
-                                        shtext.label = "Baked Image " + img_name
-                                        shtext.use_custom_color = True
-                                        shtext.color = NODE_COLOR
-                                        collect_report("Creating Image Node for baked image")
-                                        if node_frame:
-                                            shtext.parent = node_frame
-                                        sT = True
-                                    except (ValueError, KeyError, IndexError):
-                                        collect_report("Failure to load baked image: " + baked_name)
+                    if cmat_is_transp and cmat.raytrace_transparency.ior == 1 and not cmat.raytrace_mirror.use and sM:
+                        if not shader.type == 'ShaderNodeBsdfTransparent':
+                            collect_report("INFO: Make TRANSPARENT shader node for: " + cmat.name)
+                            TreeNodes.nodes.remove(shader)
+                            shader = TreeNodes.nodes.new('ShaderNodeBsdfTransparent')
+                            shader.location = 0, 470
+                            links.new(shader.outputs[0], shout.inputs[0])
+
+                    shader.inputs['Color'].default_value = (cmat.diffuse_color.r,
+                                                            cmat.diffuse_color.g,
+                                                            cmat.diffuse_color.b, 1)
+
                     if sT:
                         if tex.use_map_color_diffuse:
                             links.new(shtext.outputs[0], shader.inputs[0])
 
                         if tex.use_map_emit:
                             if not Add_Emission:
-                                collect_report("INFO: Mix EMISSION + Texture shader node " + cmat.name)
+                                collect_report("INFO: Mix EMISSION + Texture shader node for: " + cmat.name)
                                 intensity = 0.5 + (tex.emit_factor / 2)
 
                                 shout.location = 550, 330
@@ -464,7 +477,6 @@ def AutoNode(active=False, operator=None):
                                 collect_report("INFO: Add Translucency + Texture shader node for: " + cmat.name)
 
                                 intensity = 0.5 + (tex.emit_factor / 2)
-
                                 shout.location = 550, 330
                                 Add_Translucent = TreeNodes.nodes.new('ShaderNodeAddShader')
                                 Add_Translucent.name = "Add_Translucent"
@@ -496,26 +508,43 @@ def AutoNode(active=False, operator=None):
                                 sMask = TreeNodes.nodes.new('ShaderNodeBsdfTransparent')
                                 sMask.location = 250, 180
                                 tMask = TreeNodes.nodes.new('ShaderNodeTexImage')
-                                tMask.location = -200, 250
+                                if node_frame:
+                                    tMask.parent = node_frame
+                                tex_node_loc = -(200 + ((row_node + 1) * 150)), (650 if col_node else 400)
+                                tMask.location = tex_node_loc
+                                imask = None
+                                img_name = getattr(img, "name", "NO NAME")
 
                                 if tex.texture.type == 'IMAGE':
-                                    imask = bpy.data.images.load(img.filepath)
+                                    try:
+                                        imask = bpy.data.images.load(img.filepath)
+                                    except:
+                                        collect_report("ERROR: Failure to load image for Mask: " + img_name)
                                 else:
-                                    imask = bpy.data.images.load(img.name)
+                                    try:
+                                        file_path = getattr(img, "filepath", None)
+                                        if file_path:
+                                            imask = bpy.data.images.load(file_path)
+                                        else:
+                                            imask = bpy.data.images.get(img_name)
+                                    except:
+                                        collect_report("ERROR: Failure to load image for Mask: " + img_name)
+                                if imask:
+                                    tMask.image = imask
+                                    links.new(Mix_Alpha.inputs[0], tMask.outputs[1])
+                                    links.new(shout.inputs[0], Mix_Alpha.outputs[0])
+                                    links.new(sMask.outputs[0], Mix_Alpha.inputs[1])
 
-                                tMask.image = imask
-                                links.new(Mix_Alpha.inputs[0], tMask.outputs[1])
-                                links.new(shout.inputs[0], Mix_Alpha.outputs[0])
-                                links.new(sMask.outputs[0], Mix_Alpha.inputs[1])
-
-                                if not Add_Emission and not Add_Translucent:
-                                    links.new(Mix_Alpha.inputs[2], shader.outputs[0])
-
-                                if Add_Emission and not Add_Translucent:
-                                    links.new(Mix_Alpha.inputs[2], Add_Emission.outputs[0])
-
-                                if Add_Translucent:
-                                    links.new(Mix_Alpha.inputs[2], Add_Translucent.outputs[0])
+                                    if not Add_Translucent:
+                                        if Add_Emission:
+                                            links.new(Mix_Alpha.inputs[2], Add_Emission.outputs[0])
+                                        else:
+                                            links.new(Mix_Alpha.inputs[2], shader.outputs[0])
+                                    else:
+                                        links.new(Mix_Alpha.inputs[2], Add_Translucent.outputs[0])
+                                else:
+                                    collect_report("ERROR: Mix Alpha could not be created "
+                                                   "(mask image could not be loaded)")
 
                         if tex.use_map_normal:
                             t = TreeNodes.nodes.new('ShaderNodeRGBToBW')

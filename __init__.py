@@ -1643,12 +1643,14 @@ class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
         sc = context.scene
 
         layout.prop(sc, "EXTRACT_ALPHA",
-                    text="Extract Alpha Textures (slow)", icon='IMAGE_RGB_ALPHA')
+                    text="Extract Alpha Textures (slow)")
         use_separator(self, context)
         layout.prop(sc, "EXTRACT_PTEX",
-                    text="Extract Procedural Textures (slow)", icon='SEQ_HISTOGRAM')
+                    text="Extract Procedural Textures (slow)")
         use_separator(self, context)
-        layout.prop(sc, "EXTRACT_OW", text="Re-extract Textures", icon='SEQ_SPLITVIEW')
+        layout.prop(sc, "EXTRACT_OW", text="Re-extract Textures")
+        use_separator(self, context)
+        layout.prop(sc, "SET_FAKE_USER", text="Set Fake User on unused images")
         use_separator(self, context)
 
         layout.label("Set the Bake Resolution")
@@ -2108,6 +2110,9 @@ def register():
     bpy.types.Scene.EXTRACT_ALPHA = BoolProperty(
             attr="EXTRACT_ALPHA", default=False
             )
+    bpy.types.Scene.SET_FAKE_USER = BoolProperty(
+            attr="SET_FAKE_USER", default=False
+            )
     bpy.types.Scene.EXTRACT_PTEX = BoolProperty(
             attr="EXTRACT_PTEX", default=False
             )
@@ -2150,6 +2155,7 @@ def unregister():
 
     del bpy.types.Scene.conv_path
     del bpy.types.Scene.EXTRACT_ALPHA
+    del bpy.types.Scene.SET_FAKE_USER
     del bpy.types.Scene.EXTRACT_PTEX
     del bpy.types.Scene.EXTRACT_OW
     del bpy.types.Scene.img_bake_size
