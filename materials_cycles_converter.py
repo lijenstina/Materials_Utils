@@ -4,7 +4,7 @@
 
 import bpy
 import os
-from os import path, access
+from os import path
 from bpy.props import BoolProperty
 from .warning_messages_utils import warning_messages
 
@@ -109,7 +109,7 @@ def BakingText(tex, mode, tex_type=None):
         sizeX = tex.texture.image.size[0]
         sizeY = tex.texture.image.size[1]
     else:
-        bake_size = (int(sc.img_bake_size) if sc.img_bake_size else 1024)
+        bake_size = (int(sc.mat_specials.img_bake_size) if sc.mat_specials.img_bake_size else 1024)
         sizeX = bake_size
         sizeY = bake_size
 
@@ -173,7 +173,7 @@ def AutoNodeInitiate(active=False, operator=None):
         COLLECT_REPORT = []
         CHECK_AUTONODE = True
         AutoNode(active, operator)
-        if sc.SET_FAKE_USER:
+        if sc.mat_specials.SET_FAKE_USER:
             SetFakeUserTex()
         collect_report("Conversion finished !", True)
     else:
@@ -364,10 +364,10 @@ def AutoNode(active=False, operator=None):
                         sM = (False if ma_alpha else True)
 
                         if tex.texture.type == 'IMAGE':
-                            if sc.EXTRACT_ALPHA and tex.texture.use_alpha:
+                            if sc.mat_specials.EXTRACT_ALPHA and tex.texture.use_alpha:
                                 if (not
                                    os.path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.png")) or
-                                   sc.EXTRACT_OW):
+                                   sc.mat_specials.EXTRACT_OW):
                                     baked_path = BakingText(tex, 'ALPHA')
                             try:
                                 if baked_path:
@@ -394,9 +394,9 @@ def AutoNode(active=False, operator=None):
                                 collect_report("ERROR: A problem occured with loading an image for {} "
                                                "(possibly missing)".format(tex.texture.name))
                         else:
-                            if sc.EXTRACT_PTEX or (sc.EXTRACT_ALPHA and ma_alpha):
+                            if sc.mat_specials.EXTRACT_PTEX or (sc.mat_specials.EXTRACT_ALPHA and ma_alpha):
                                 if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
-                                   sc.EXTRACT_OW):
+                                   sc.mat_specials.EXTRACT_OW):
                                     tex_type = tex.texture.type.lower()
                                     collect_report("Attempting to Extract Procedural Texture type: " + tex_type)
                                     baked_path = BakingText(tex, 'PTEX', tex_type)

@@ -1369,7 +1369,7 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
 
     def check_valid_path(self, context):
         sc = context.scene
-        paths = bpy.path.abspath(sc.conv_path)
+        paths = bpy.path.abspath(sc.mat_specials.conv_path)
 
         if os.path.exists(paths):
             if os.access(paths, os.W_OK | os.X_OK):
@@ -1642,22 +1642,22 @@ class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
         layout = self.layout
         sc = context.scene
 
-        layout.prop(sc, "EXTRACT_ALPHA",
+        layout.prop(sc.mat_specials, "EXTRACT_ALPHA",
                     text="Extract Alpha Textures (slow)")
         use_separator(self, context)
-        layout.prop(sc, "EXTRACT_PTEX",
+        layout.prop(sc.mat_specials, "EXTRACT_PTEX",
                     text="Extract Procedural Textures (slow)")
         use_separator(self, context)
-        layout.prop(sc, "EXTRACT_OW", text="Re-extract Textures")
+        layout.prop(sc.mat_specials, "EXTRACT_OW", text="Re-extract Textures")
         use_separator(self, context)
-        layout.prop(sc, "SET_FAKE_USER", text="Set Fake User on unused images")
+        layout.prop(sc.mat_specials, "SET_FAKE_USER", text="Set Fake User on unused images")
         use_separator(self, context)
 
         layout.label("Set the Bake Resolution")
-        res = str(sc.img_bake_size)
+        res = str(sc.mat_specials.img_bake_size)
         layout.label("Current Setting is : %s" % (res + "x" + res), icon='INFO')
         use_separator(self, context)
-        layout.prop(sc, "img_bake_size", icon='NODE_SEL', expand=True)
+        layout.prop(sc.mat_specials, "img_bake_size", icon='NODE_SEL', expand=True)
 
 
 class MATERIAL_PT_scenemassive(bpy.types.Panel):
@@ -1696,7 +1696,7 @@ class MATERIAL_PT_scenemassive(bpy.types.Panel):
         box = layout.box()
         box.label("Save Directory")
         split = box.split(0.85)
-        split.prop(sc, "conv_path", text="", icon="RENDER_RESULT")
+        split.prop(sc.mat_specials, "conv_path", text="", icon="RENDER_RESULT")
         split.operator("material.check_converter_path",
                        text="", icon="EXTERNAL_DATA")
 
@@ -1815,6 +1815,41 @@ class material_converter_report(bpy.types.Operator):
 
     def execute(self, context):
         return {'FINISHED'}
+
+
+# -----------------------------------------------------------------------------
+# Scene Properties
+
+class material_specials_scene_props(bpy.types.PropertyGroup):
+    conv_path = bpy.props.StringProperty(
+            name="Save Directory",
+            description=("Path to save images during conversion \n"
+                         "Default is the location of the blend file"),
+            default="//",
+            subtype='DIR_PATH'
+            )
+    EXTRACT_ALPHA = BoolProperty(
+            attr="EXTRACT_ALPHA", default=False
+            )
+    SET_FAKE_USER = BoolProperty(
+            attr="SET_FAKE_USER", default=False
+            )
+    EXTRACT_PTEX = BoolProperty(
+            attr="EXTRACT_PTEX", default=False
+            )
+    EXTRACT_OW = BoolProperty(
+            attr="Overwrite",
+            default=False,
+            description="Extract textures again instead of re-using priorly extracted textures"
+            )
+    img_bake_size = EnumProperty(
+            name="Bake Image Size",
+            description="Set the resolution size of baked images \n",
+            items=(('512', "Set : 512 x 512", "Bake Resolution 512 x 512"),
+                   ('1024', "Set : 1024 x 1024", "Bake Resolution 1024 x 1024"),
+                   ('2048', "Set : 2048 x 2048", "Bake Resolution 2048 x 2048")),
+            default='1024',
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -2100,35 +2135,7 @@ def register():
     warning_messages_utils.MAT_SPEC_NAME = __name__
 
     # Register Scene Properties
-    bpy.types.Scene.conv_path = bpy.props.StringProperty(
-            name="Save Directory",
-            description=("Path to save images during conversion \n"
-                         "Default is the location of the blend file"),
-            default="//",
-            subtype='DIR_PATH'
-            )
-    bpy.types.Scene.EXTRACT_ALPHA = BoolProperty(
-            attr="EXTRACT_ALPHA", default=False
-            )
-    bpy.types.Scene.SET_FAKE_USER = BoolProperty(
-            attr="SET_FAKE_USER", default=False
-            )
-    bpy.types.Scene.EXTRACT_PTEX = BoolProperty(
-            attr="EXTRACT_PTEX", default=False
-            )
-    bpy.types.Scene.EXTRACT_OW = BoolProperty(
-            attr="Overwrite",
-            default=False,
-            description="Extract textures again instead of re-using priorly extracted textures"
-            )
-    bpy.types.Scene.img_bake_size = EnumProperty(
-            name="Bake Image Size",
-            description="Set the resolution size of baked images \n",
-            items=(('512', "Set : 512 x 512", "Bake Resolution 512 x 512"),
-                   ('1024', "Set : 1024 x 1024", "Bake Resolution 1024 x 1024"),
-                   ('2048', "Set : 2048 x 2048", "Bake Resolution 2048 x 2048")),
-            default='1024',
-            )
+    bpy.types.Scene.mat_specials = bpy.props.PointerProperty(type=material_specials_scene_props)
 
     kc = bpy.context.window_manager.keyconfigs.addon
     if kc:
@@ -2153,12 +2160,7 @@ def unregister():
     bpy.types.MATERIAL_MT_specials.remove(menu_move)
     bpy.types.MATERIAL_MT_specials.remove(menu_func)
 
-    del bpy.types.Scene.conv_path
-    del bpy.types.Scene.EXTRACT_ALPHA
-    del bpy.types.Scene.SET_FAKE_USER
-    del bpy.types.Scene.EXTRACT_PTEX
-    del bpy.types.Scene.EXTRACT_OW
-    del bpy.types.Scene.img_bake_size
+    del bpy.types.Scene.mat_specials
 
     bpy.utils.unregister_module(__name__)
 

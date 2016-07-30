@@ -144,7 +144,7 @@ def makeNodeUsingImage2(cmat, texture):
     sceneContext = bpy.context.scene
     TreeNodes = cmat.node_tree
     texNode = None
-    if not os.path.exists(bpy.path.abspath(texture.name + "_PTEXT.jpg")) or sceneContext.EXTRACT_OW:
+    if not os.path.exists(bpy.path.abspath(texture.name + "_PTEXT.jpg")) or sceneContext.mat_specials.EXTRACT_OW:
         BakingText(texture, 'PTEX')
 
     img = bpy.data.images.load(texture.name + "_PTEXT.jpg")
