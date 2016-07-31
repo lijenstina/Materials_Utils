@@ -121,7 +121,7 @@ def BakingText(tex, mode, tex_type=None):
     img = bpy.data.images.get("TMP_BAKING")
     img.file_format = ("JPEG" if not mode == "ALPHA" else "PNG")
 
-    paths = bpy.path.abspath(sc.conv_path)
+    paths = bpy.path.abspath(sc.mat_specials.conv_path)
     tex_name = getattr(getattr(tex.texture, "image", None), "name", None)
     texture_name = (tex_name.rpartition(".")[0] if tex_name else tex.texture.name)
     new_tex_name = "baked"
