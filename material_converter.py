@@ -3,7 +3,6 @@
 import bpy
 import mathutils
 from mathutils import Vector
-import os.path
 from .warning_messages_utils import warning_messages
 
 # -----------------------------------------------------------------------------
@@ -90,12 +89,15 @@ def copyMapping(textureSlot, textureMapping):
 
 
 def addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, prevTexNode, newTexNode, nodeType, textureIdx):
-    links = TreeNodes.links
-    mixRgbNode.name = '{} Mix {:d}'.format(nodeType, textureIdx)
-    mixRgbNode.blend_type = textureSlot.blend_type
-    mixRgbNode.inputs['Fac'].default_value = textureSlot.diffuse_color_factor
-    links.new(prevTexNode.outputs['Color'], mixRgbNode.inputs['Color2'])
-    links.new(newTexNode.outputs['Color'], mixRgbNode.inputs['Color1'])
+    try:
+        links = TreeNodes.links
+        mixRgbNode.name = '{} Mix {:d}'.format(nodeType, textureIdx)
+        mixRgbNode.blend_type = textureSlot.blend_type
+        mixRgbNode.inputs['Fac'].default_value = textureSlot.diffuse_color_factor
+        links.new(prevTexNode.outputs['Color'], mixRgbNode.inputs['Color2'])
+        links.new(newTexNode.outputs['Color'], mixRgbNode.inputs['Color1'])
+    except:
+        collect_report("ERROR: Failure to find link with a Mix node")
 
 
 def makeBiNodes(cmat):
@@ -109,7 +111,7 @@ def makeBiNodes(cmat):
 
     biShaderNodeMaterial = TreeNodes.nodes.new(BI_MATERIAL_NODE)
     biShaderNodeMaterial.parent = BIFrame
-    biShaderNodeMaterial.name = 'BI Materai'
+    biShaderNodeMaterial.name = 'BI Material'
     biShaderNodeMaterial.material = cmat
     biShaderNodeMaterial.location = 0, 600
 
@@ -117,8 +119,11 @@ def makeBiNodes(cmat):
     biShaderNodeOutput.parent = BIFrame
     biShaderNodeOutput.name = 'BI Output'
     biShaderNodeOutput.location = 200, 600
-    links.new(biShaderNodeMaterial.outputs['Color'], biShaderNodeOutput.inputs['Color'])
-    links.new(biShaderNodeMaterial.outputs['Alpha'], biShaderNodeOutput.inputs['Alpha'])
+    try:
+        links.new(biShaderNodeMaterial.outputs['Color'], biShaderNodeOutput.inputs['Color'])
+        links.new(biShaderNodeMaterial.outputs['Alpha'], biShaderNodeOutput.inputs['Alpha'])
+    except:
+        collect_report("ERROR: Failure to find links with the BI Shader Material")
 
 
 def placeNode(node, posX, posY, deltaX, deltaY, countX, countY):
@@ -137,19 +142,6 @@ def makeNodeUsingImage1(cmat, texture):
     TreeNodes = cmat.node_tree
     img = texture.image
     texNode = makeImageTextureNode(TreeNodes, img)
-    return texNode
-
-
-def makeNodeUsingImage2(cmat, texture):
-    sceneContext = bpy.context.scene
-    TreeNodes = cmat.node_tree
-    texNode = None
-    if not os.path.exists(bpy.path.abspath(texture.name + "_PTEXT.jpg")) or sceneContext.mat_specials.EXTRACT_OW:
-        BakingText(texture, 'PTEX')
-
-    img = bpy.data.images.load(texture.name + "_PTEXT.jpg")
-    texNode = makeImageTextureNode(TreeNodes, img)
-
     return texNode
 
 
@@ -175,12 +167,15 @@ def makeMaterialOutput(TreeNodes):
 
 def replaceNode(oldNode, newNode):
     newNode.location = oldNode.location
-    for link in oldNode.outputs['BSDF'].links:
-        links.new(newNode.outputs['BSDF'], link.to_socket)
-    for link in oldNode.inputs['Color'].links:
-        links.new(newNode.inputs['Color'], link.from_socket)
-    for link in oldNode.inputs['Normal'].links:
-        links.new(newNode.inputs['Normal'], link.from_socket)
+    try:
+        for link in oldNode.outputs['BSDF'].links:
+            links.new(newNode.outputs['BSDF'], link.to_socket)
+        for link in oldNode.inputs['Color'].links:
+            links.new(newNode.inputs['Color'], link.from_socket)
+        for link in oldNode.inputs['Normal'].links:
+            links.new(newNode.inputs['Normal'], link.from_socket)
+    except:
+        collect_report("ERROR: Failure to replace node")
 
 
 def BIToCycleTexCoord(links, textureSlot, texCoordNode, textureMappingNode):
@@ -215,10 +210,12 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
 
     textureSlots = [textureSlot for textureSlot in cmat.texture_slots if
                     (textureSlot and textureSlot.use_map_color_diffuse)]
+
     texCount = len(textureSlots)
     texNode = None
     latestNode = None
     groupName = 'Diffuse'
+
     if any(textureSlots):
         diffuseFrame = TreeNodes.nodes.new(NODE_FRAME)
         diffuseFrame.name = '{} Frame'.format(groupName)
@@ -261,15 +258,19 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
             texNode = colorMult
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
+
             if textureSlot.use and textureIdx > 0:
-                # Create a node to mix multiple texture nodes
-                mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
-                mixRgbNode.parent = diffuseFrame
-                addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
-                              '{}'.format(groupName), textureIdx)
-                mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
-                                             (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
-                latestNode = mixRgbNode
+                try:
+                    # Create a node to mix multiple texture nodes
+                    mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
+                    mixRgbNode.parent = diffuseFrame
+                    addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
+                                  '{}'.format(groupName), textureIdx)
+                    mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
+                                                 (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
+                    latestNode = mixRgbNode
+                except:
+                    continue
 
     if latestNode:
         links.new(latestNode.outputs['Color'], mainShader.inputs['Color'])
@@ -278,7 +279,8 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
     currPosY = currPosY - (textureNodeSizeY * (texCount))
 
     # BI Material to Cycles - Alpha Transparency
-    textureSlots = [textureSlot for textureSlot in cmat.texture_slots if (textureSlot and textureSlot.use_map_alpha)]
+    textureSlots = [textureSlot for textureSlot in cmat.texture_slots if
+                    (textureSlot and textureSlot.use_map_alpha)]
     texCount = len(textureSlots)
     texNode = None
     latestNode = None
@@ -289,17 +291,21 @@ def createDiffuseNodes(cmat, texCoordNode, mainShader, materialOutput):
             collect_report("INFO: Generating Transparency Nodes for: " + tex_node_name)
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
+
             if textureSlot.use and textureIdx > 0:
-                # Create a node to mix multiple texture nodes
-                mixAlphaNode = TreeNodes.nodes.new(RGB_MIX_NODE)
-                mixAlphaNode.name = 'Alpha Mix {:d}'.format(textureIdx)
-                mixAlphaNode.blend_type = textureSlot.blend_type
-                mixAlphaNode.inputs['Fac'].default_value = textureSlot.diffuse_color_factor
-                placeNode(mixAlphaNode, -200 - ((texCount - textureIdx - 1) * 200), 400 - 240,
-                          textureNodeSizeX, textureNodeSizeY, 0, 0)
-                links.new(texNode.outputs['Alpha'], mixAlphaNode.inputs['Color2'])
-                links.new(latestNode.outputs['Alpha'], mixAlphaNode.inputs['Color1'])
-                latestNode = mixAlphaNode
+                try:
+                    # Create a node to mix multiple texture nodes
+                    mixAlphaNode = TreeNodes.nodes.new(RGB_MIX_NODE)
+                    mixAlphaNode.name = 'Alpha Mix {:d}'.format(textureIdx)
+                    mixAlphaNode.blend_type = textureSlot.blend_type
+                    mixAlphaNode.inputs['Fac'].default_value = textureSlot.diffuse_color_factor
+                    placeNode(mixAlphaNode, -200 - ((texCount - textureIdx - 1) * 200), 400 - 240,
+                              textureNodeSizeX, textureNodeSizeY, 0, 0)
+                    links.new(texNode.outputs['Alpha'], mixAlphaNode.inputs['Color2'])
+                    links.new(latestNode.outputs['Alpha'], mixAlphaNode.inputs['Color1'])
+                    latestNode = mixAlphaNode
+                except:
+                    continue
     if latestNode:
         alphaMixShader = TreeNodes.nodes.get('Alpha Mix Shader')
         if alphaMixShader:
@@ -316,7 +322,8 @@ def createNormalNodes(cmat, texCoordNode, mainShader, materialOutput):
     texCount = len([node for node in TreeNodes.nodes if node.type == 'MAPPING'])
     currPosY = -textureNodeSizeY * texCount
 
-    textureSlots = [textureSlot for textureSlot in cmat.texture_slots if (textureSlot and textureSlot.use_map_normal)]
+    textureSlots = [textureSlot for textureSlot in cmat.texture_slots if
+                    (textureSlot and textureSlot.use_map_normal)]
     texCount = len(textureSlots)
     texNode = None
     latestNode = None
@@ -363,15 +370,19 @@ def createNormalNodes(cmat, texCoordNode, mainShader, materialOutput):
             texNode = normalMult
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
+
             if textureSlot.use and textureIdx > 0:
-                # Create a node to mix multiple texture nodes
-                mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
-                mixRgbNode.parent = normalFrame
-                addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
-                              '{}'.format(groupName), textureIdx)
-                mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
-                                             (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
-                latestNode = mixRgbNode
+                try:
+                    # Create a node to mix multiple texture nodes
+                    mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
+                    mixRgbNode.parent = normalFrame
+                    addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
+                                  '{}'.format(groupName), textureIdx)
+                    mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
+                                                 (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
+                    latestNode = mixRgbNode
+                except:
+                    continue
 
     if latestNode:
         normalMapNode = TreeNodes.nodes.new(NORMAL_MAP_NODE)
@@ -434,48 +445,55 @@ def createSpecularNodes(cmat, texCoordNode, mainShader, mainDiffuse, materialOut
             texNode = specularMult
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
+
             if textureSlot.use and textureIdx > 0:
-                # Create a node to mix multiple texture nodes
-                mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
-                mixRgbNode.parent = specularFrame
-                addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
-                              '{}'.format(groupName), textureIdx)
-                mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
-                                             (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
-                latestNode = mixRgbNode
+                try:
+                    # Create a node to mix multiple texture nodes
+                    mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
+                    mixRgbNode.parent = specularFrame
+                    addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
+                                  '{}'.format(groupName), textureIdx)
+                    mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
+                                                 (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
+                    latestNode = mixRgbNode
+                except:
+                    continue
 
     if latestNode:
-        glossShader = TreeNodes.nodes.new(BSDF_GLOSSY_NODE)
-        RGBToBW = TreeNodes.nodes.new(RGB_TO_BW_NODE)
-        RGBToBW.location = Vector((0, latestNode.location.y)) + Vector((0, 0))
-        glossShader.location = Vector((0, latestNode.location.y)) + Vector((0, -80))
+        try:
+            glossShader = TreeNodes.nodes.new(BSDF_GLOSSY_NODE)
+            RGBToBW = TreeNodes.nodes.new(RGB_TO_BW_NODE)
+            RGBToBW.location = Vector((0, latestNode.location.y)) + Vector((0, 0))
+            glossShader.location = Vector((0, latestNode.location.y)) + Vector((0, -80))
 
-        links.new(latestNode.outputs['Color'], glossShader.inputs['Color'])
-        links.new(latestNode.outputs['Color'], RGBToBW.inputs['Color'])
+            links.new(latestNode.outputs['Color'], glossShader.inputs['Color'])
+            links.new(latestNode.outputs['Color'], RGBToBW.inputs['Color'])
 
-        outputNode = TreeNodes.nodes.get('Material Output')
-        spec_mixer_1 = TreeNodes.nodes.new(SHADER_MIX_NODE)
-        spec_mixer_1.location = outputNode.location
-        spec_mixer_2 = TreeNodes.nodes.new(SHADER_MIX_NODE)
-        spec_mixer_2.inputs['Fac'].default_value = .4
-        spec_mixer_2.location = outputNode.location + Vector((180, 0))
-        links.new(spec_mixer_1.outputs['Shader'], spec_mixer_2.inputs[2])
-        links.new(spec_mixer_2.outputs['Shader'], outputNode.inputs['Surface'])
-        links.new(RGBToBW.outputs['Val'], spec_mixer_1.inputs['Fac'])
+            outputNode = TreeNodes.nodes.get('Material Output')
+            spec_mixer_1 = TreeNodes.nodes.new(SHADER_MIX_NODE)
+            spec_mixer_1.location = outputNode.location
+            spec_mixer_2 = TreeNodes.nodes.new(SHADER_MIX_NODE)
+            spec_mixer_2.inputs['Fac'].default_value = .4
+            spec_mixer_2.location = outputNode.location + Vector((180, 0))
+            links.new(spec_mixer_1.outputs['Shader'], spec_mixer_2.inputs[2])
+            links.new(spec_mixer_2.outputs['Shader'], outputNode.inputs['Surface'])
+            links.new(RGBToBW.outputs['Val'], spec_mixer_1.inputs['Fac'])
 
-        links.new(glossShader.outputs['BSDF'], spec_mixer_1.inputs[2])
+            links.new(glossShader.outputs['BSDF'], spec_mixer_1.inputs[2])
 
-        outputNode.location += Vector((360, 0))
-        normalMapNode = TreeNodes.nodes.get('Normal Map')
-        links.new(normalMapNode.outputs['Normal'], glossShader.inputs['Normal'])
+            outputNode.location += Vector((360, 0))
+            normalMapNode = TreeNodes.nodes.get('Normal Map')
+            links.new(normalMapNode.outputs['Normal'], glossShader.inputs['Normal'])
 
-        if mainDiffuse.type == 'BSDF_DIFFUSE':
-            outputLink = 'BSDF'
-        else:
-            outputLink = 'Shader'
+            if mainDiffuse.type == 'BSDF_DIFFUSE':
+                outputLink = 'BSDF'
+            else:
+                outputLink = 'Shader'
 
-        links.new(mainDiffuse.outputs[outputLink], spec_mixer_1.inputs[1])
-        links.new(mainDiffuse.outputs[outputLink], spec_mixer_2.inputs[1])
+            links.new(mainDiffuse.outputs[outputLink], spec_mixer_1.inputs[1])
+            links.new(mainDiffuse.outputs[outputLink], spec_mixer_2.inputs[1])
+        except:
+            return
 
 
 def createEmissionNodes(cmat, texCoordNode, mainShader, materialOutput):
@@ -484,7 +502,8 @@ def createEmissionNodes(cmat, texCoordNode, mainShader, materialOutput):
     texCount = len([node for node in TreeNodes.nodes if node.type == 'MAPPING'])
     currPosY = -textureNodeSizeY * texCount
 
-    textureSlots = [textureSlot for textureSlot in cmat.texture_slots if (textureSlot and textureSlot.use_map_emit)]
+    textureSlots = [textureSlot for textureSlot in cmat.texture_slots if
+                    (textureSlot and textureSlot.use_map_emit)]
     texCount = len(textureSlots)
     texNode = None
     latestNode = None
@@ -531,34 +550,41 @@ def createEmissionNodes(cmat, texCoordNode, mainShader, materialOutput):
             texNode = emissionMult
             if textureSlot.use and textureIdx == 0:
                 latestNode = texNode
+
             if textureSlot.use and textureIdx > 0:
-                # Create a node to mix multiple texture nodes
-                mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
-                mixRgbNode.parent = emissionFrame
-                addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
-                              '{}'.format(groupName), textureIdx)
-                mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
-                                             (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
-                latestNode = mixRgbNode
+                try:
+                    # Create a node to mix multiple texture nodes
+                    mixRgbNode = TreeNodes.nodes.new(RGB_MIX_NODE)
+                    mixRgbNode.parent = emissionFrame
+                    addRGBMixNode(TreeNodes, textureSlot, mixRgbNode, texNode, latestNode,
+                                  '{}'.format(groupName), textureIdx)
+                    mixRgbNode.location = Vector((max(texNode.location.x, latestNode.location.x),
+                                                 (texNode.location.y + latestNode.location.y) / 2)) + Vector((200, 0))
+                    latestNode = mixRgbNode
+                except:
+                    continue
 
     if latestNode:
-        emissionNode = TreeNodes.nodes.new(BSDF_EMISSION_NODE)
-        emissionNode.inputs['Strength'].default_value = 1
-        addShaderNode = TreeNodes.nodes.new(SHADER_ADD_NODE)
-        addShaderNode.location = materialOutput.location + Vector((0, -100))
-        xPos = mainShader.location.x
-        yPos = latestNode.location.y
+        try:
+            emissionNode = TreeNodes.nodes.new(BSDF_EMISSION_NODE)
+            emissionNode.inputs['Strength'].default_value = 1
+            addShaderNode = TreeNodes.nodes.new(SHADER_ADD_NODE)
+            addShaderNode.location = materialOutput.location + Vector((0, -100))
+            xPos = mainShader.location.x
+            yPos = latestNode.location.y
 
-        emissionNode.location = Vector((xPos, yPos))
-        materialOutput.location += Vector((400, 0))
+            emissionNode.location = Vector((xPos, yPos))
+            materialOutput.location += Vector((400, 0))
 
-        node = materialOutput.inputs[0].links[0].from_node
-        node.location += Vector((400, 0))
+            node = materialOutput.inputs[0].links[0].from_node
+            node.location += Vector((400, 0))
 
-        links.new(latestNode.outputs['Color'], emissionNode.inputs['Color'])
-        links.new(emissionNode.outputs['Emission'], addShaderNode.inputs[1])
-        links.new(mainShader.outputs['BSDF'], addShaderNode.inputs[0])
-        links.new(addShaderNode.outputs['Shader'], node.inputs[2])
+            links.new(latestNode.outputs['Color'], emissionNode.inputs['Color'])
+            links.new(emissionNode.outputs['Emission'], addShaderNode.inputs[1])
+            links.new(mainShader.outputs['BSDF'], addShaderNode.inputs[0])
+            links.new(addShaderNode.outputs['Shader'], node.inputs[2])
+        except:
+            return
 
 
 def renameNode(node, baseName, nodesCount, nodeIndex):
@@ -604,7 +630,7 @@ def AutoNode(active=False, operator=None):
         # check for empty material (it will fall through the first check)
         test_empty = getattr(cmat, "name", None)
         if test_empty is None:
-            collect_report("An empty material was hit, skipping")
+            collect_report("INFO: An empty material was hit, skipping")
             continue
         else:
             cmat.use_nodes = True
@@ -671,21 +697,21 @@ def makeCyclesFromBI(cmat):
         links.new(Mix_Alpha.outputs['Shader'], materialOutput.inputs['Surface'])
         mainDiffuse = Mix_Alpha
 
-    # Material Glass
-    if cmat_mirror and cmat_mirror_fac > 0.001 and cmat_is_transp:
-        collect_report("INFO:  Make GLASS shader node: " + cmat.name)
-        newShader = TreeNodes.nodes.new(BSDF_GLASS_NODE)
-        replaceNode(shader, newShader)
-        TreeNodes.nodes.remove(shader)
-        shader = newShader
-
-    # Material Mirror
-    if cmat_mirror and cmat_mirror_fac > 0.001 and not cmat_is_transp:
-        collect_report("INFO:  Make MIRROR shader node: " + cmat.name)
-        newShader = TreeNodes.nodes.new(BSDF_GLOSSY_NODE)
-        replaceNode(shader, newShader)
-        TreeNodes.nodes.remove(shader)
-        shader = newShader
+    if cmat_mirror and cmat_mirror_fac > 0.001:
+        if cmat_use_transp:
+            # Material Glass
+            collect_report("INFO:  Make GLASS shader node: " + cmat.name)
+            newShader = TreeNodes.nodes.new(BSDF_GLASS_NODE)
+            shader = newShader
+            replaceNode(shader, newShader)
+            TreeNodes.nodes.remove(shader)
+        else:
+            # Material Mirror
+            collect_report("INFO:  Make MIRROR shader node: " + cmat.name)
+            newShader = TreeNodes.nodes.new(BSDF_GLOSSY_NODE)
+            shader = newShader
+            replaceNode(shader, newShader)
+            TreeNodes.nodes.remove(shader)
 
     nodesDictionary = makeTextureNodeDict(cmat)
 

@@ -113,7 +113,6 @@ def replace_material(m1, m2, all_objects=False, update_selection=False, operator
     matrep = bpy.data.materials.get(m2)
 
     if matorg != matrep and None not in (matorg, matrep):
-
         # store active object
         if all_objects:
             objs = bpy.data.objects
@@ -168,7 +167,7 @@ def select_material_by_name(find_mat_name):
     if not editmode:
         objs = bpy.data.objects
         for ob in objs:
-            if included_object_types(ob):
+            if included_object_types(ob.type):
                 ms = ob.material_slots
                 for m in ms:
                     if m.material == find_mat:
@@ -179,7 +178,6 @@ def select_material_by_name(find_mat_name):
                         break
                     else:
                         ob.select = False
-
             # deselect non-meshes
             else:
                 ob.select = False
@@ -342,8 +340,15 @@ def cleanmatslots(operator=None):
     for ob in objs:
         if ob.type == 'MESH':
             mats = ob.material_slots.keys()
+            mat_check = ob.material_slots
 
-            # if mats is empty then then mats[faceindex] will be out of range
+            # remove empty materials first
+            for match in mat_check:
+                namee = getattr(match, "name", "")
+                if namee in (""):
+                    bpy.ops.object.material_slot_remove()
+
+            # if mats is empty then mats[faceindex] will be out of range
             if mats:
                 # check the polygons on the mesh to build a list of used materials
                 usedMatIndex = []  # we'll store used materials indices here
@@ -409,6 +414,7 @@ def cleanmatslots(operator=None):
 
 # separate edit mode mesh function
 # (faster than iterating through all faces)
+
 def assign_mat_mesh_edit(matname="Default", operator=None):
     actob = bpy.context.active_object
 
@@ -457,6 +463,8 @@ def assign_mat_mesh_edit(matname="Default", operator=None):
             actob.select = False
 
         if operator:
+            if matname in ("", None):
+                matname = "A New Untitled"
             warning_messages(operator, 'A_MAT_NAME_EDIT', matname, 'MAT')
 
 
@@ -477,6 +485,7 @@ def assign_mat(matname="Default", operator=None):
             target = m
             found = True
             break
+
     if not found:
         target = bpy.data.materials.new(matname)
 
@@ -897,6 +906,10 @@ class VIEW3D_OT_assign_material(bpy.types.Operator):
             cleanmatslots()
 
         mat_to_texface()
+
+        # reset the passing string
+        self.matname = ""
+
         return {'FINISHED'}
 
 
@@ -2163,6 +2176,7 @@ def unregister():
     del bpy.types.Scene.mat_specials
 
     bpy.utils.unregister_module(__name__)
+
 
 if __name__ == "__main__":
     register()

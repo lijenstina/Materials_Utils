@@ -417,7 +417,7 @@ def AutoNode(active=False, operator=None):
                                         shtext.parent = node_frame
                                     sT = True
                                 except:
-                                    collect_report("ERROR: Failure to load baked image: " + baked_name)
+                                    collect_report("ERROR: Failure to load baked image: " + img_name)
 
                     if cmat_is_transp and cmat.raytrace_transparency.ior == 1 and not cmat.raytrace_mirror.use and sM:
                         if not shader.type == 'ShaderNodeBsdfTransparent':
