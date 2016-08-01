@@ -1,3 +1,6 @@
+# gpl: author lijenstina
+# -*- coding: utf-8 -*-
+
 import bpy
 
 MAT_SPEC_NAME = "materials_specials"
@@ -29,12 +32,15 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
         if object_name:
             if type(object_name) is list:
                 obj_name = ", ".join(object_name)
-                if (1 < len(object_name) <= MAX_COUNT):
+                obj_size = len(object_name)
+
+                # compare string list size
+                if (1 < obj_size <= MAX_COUNT):
                     obj_name = obj_name + gramma_p
-                elif (len(object_name) > MAX_COUNT):
+                elif (obj_size > MAX_COUNT):
                     abbrevation = ("(Multiple)" if is_mat else "(Multiple Objects)")
                     obj_name = abbrevation + gramma_p
-                elif (len(object_name) == 1):
+                elif (obj_size == 1):
                     obj_name = obj_name + gramma_s
             else:
                 obj_name = object_name + gramma_s
@@ -50,6 +56,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'C_OB_MIX_NO_MAT': obj_name + "No Materials or an Object type that "
             "can't have Materials (Clean Material Slots)",
             'R_OB_NO_MAT': obj_name + "No Materials. Nothing to remove",
+            'R_OB_FAIL_MAT': obj_name + "Failed to remove materials - (Operator Error)",
             'R_NO_SL_MAT': "No Selection. Material slots are not removed",
             'R_ALL_SL_MAT': "All materials removed from selected objects",
             'R_ALL_NO_MAT': "Object(s) have no materials to remove",
@@ -63,6 +70,8 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'FAKE_NO_MAT': "Fake User Settings: Object(s) with no Materials or no changes needed",
             'CPY_MAT_MIX_OB': "Copy Materials to others: Some of the Object types can't have Materials",
             'CPY_MAT_ONE_OB': "Copy Materials to others: Only one object selected",
+            'CPY_MAT_FAIL': "Copy Materials to others: (Operator Error)",
+            'CPY_MAT_DONE': "Materials are copied from active to selected objects",
             'TEX_MAT_NO_SL': "Texface to Material: No Selected Objects",
             'TEX_MAT_NO_CRT': obj_name + "not met the conditions for the tool (UVs, Active Images) ",
             'MAT_TEX_NO_SL': "Material to Texface: No Selected Objects",
@@ -90,6 +99,20 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             }
 
         operator.report({'INFO'}, message[warn])
+
+
+# -----------------------------------------------------------------------------
+# utility functions:
+
+def c_is_cycles_addon_enabled():
+    # checks if Cycles is enabled
+    # thanks to ideasman42
+    return ('cycles' in bpy.context.user_preferences.addons.keys())
+
+
+def c_data_has_materials():
+    # check for material presence in data
+    return (len(bpy.data.materials) > 0)
 
 
 def register():

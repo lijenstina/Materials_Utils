@@ -6,7 +6,9 @@ import bpy
 import os
 from os import path
 from bpy.props import BoolProperty
-from .warning_messages_utils import warning_messages
+from .warning_messages_utils import (warning_messages,
+                                     c_is_cycles_addon_enabled,
+                                     c_data_has_materials)
 
 # -----------------------------------------------------------------------------
 # Globals #
@@ -23,6 +25,7 @@ COLLECT_REPORT = []
 
 # -----------------------------------------------------------------------------
 # Functions #
+
 
 def collect_report(collection="", is_final=False):
     # collection passes a string for appending to COLLECT_REPORT global
@@ -569,7 +572,7 @@ class mllock(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        return (c_is_cycles_addon_enabled() and c_data_has_materials())
 
     def execute(self, context):
         cmat = bpy.context.selected_objects[0].active_material
@@ -591,7 +594,7 @@ class mlrefresh(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        return (c_is_cycles_addon_enabled() and c_data_has_materials())
 
     def execute(self, context):
         AutoNodeInitiate(False, self)
@@ -612,7 +615,8 @@ class mlrefresh_active(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None
+        return (c_is_cycles_addon_enabled() and c_data_has_materials() and
+                context.active_object is not None)
 
     def execute(self, context):
         AutoNodeInitiate(True, self)
@@ -634,6 +638,11 @@ class mlrestore(bpy.types.Operator):
             description="When restoring, switch Use Nodes On/Off",
             default=True
             )
+
+    @classmethod
+    def poll(cls, context):
+        # well, i'll think of something later on :)
+        return True
 
     def execute(self, context):
         if self.switcher:

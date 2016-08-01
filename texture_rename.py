@@ -1,3 +1,6 @@
+# gpl: author Yadoob
+# -*- coding: utf-8 -*-
+
 import bpy
 from bpy.props import StringProperty
 from .warning_messages_utils import warning_messages
@@ -17,6 +20,10 @@ class SimpleOp(bpy.types.Operator):
     is_not_undo = False     # prevent drawing props on undo
     named = StringProperty(name="Search for name",
                            default=def_name)
+
+    @classmethod
+    def poll(cls, context):
+        return (len(bpy.data.images) > 0)
 
     def draw(self, context):
         layout = self.layout

@@ -17,7 +17,8 @@
 # ##### END GPL LICENSE BLOCK #####
 #  (c) 2016 meta-androcto, parts based on work by Saidenka, lijenstina
 #           Materials Utils: by MichaleW, lijenstina,
-#                           (some code used from: CoDEmanX, SynaGl0w),
+#                           (some code thanks to: CoDEmanX, SynaGl0w,
+#                                                 ideasman42)
 #           Materials Conversion: Silvio Falcinelli, johnzero7#, others
 #           Link to base names: Sybren, Texture renamer: Yadoob
 
@@ -49,9 +50,11 @@ else:
 
 import bpy
 from bpy.props import StringProperty, BoolProperty, EnumProperty
-from .warning_messages_utils import warning_messages
 import os
 from os import path, access
+from .warning_messages_utils import (warning_messages,
+                                     c_is_cycles_addon_enabled,
+                                     c_data_has_materials)
 
 
 # -----------------------------------------------------------------------------
@@ -81,19 +84,17 @@ def fake_user_set(fake_user='ON', materials='UNUSED', operator=None):
             objs = bpy.data.objects
             w_mesg = "(All Used Materials)"
 
-        mats = (mat for ob in objs if hasattr(ob.data, "materials") for mat in ob.data.materials if mat.library is None)
+        mats = (mat for ob in objs if hasattr(ob.data, "materials") for
+                mat in ob.data.materials if mat.library is None)
 
     # collect mat names for warning_messages
     matnames = []
 
-    if fake_user == 'ON':
-        warn_mesg = 'FAKE_SET_ON'
-    elif fake_user == 'OFF':
-        warn_mesg = 'FAKE_SET_OFF'
+    warn_mesg = ('FAKE_SET_ON' if fake_user == 'ON' else 'FAKE_SET_OFF')
 
     for mat in mats:
         mat.use_fake_user = (fake_user == 'ON')
-        matnames.append(mat.name)
+        matnames.append(getattr(mat, "name", "NO NAME"))
 
     if operator:
         if matnames:
@@ -225,7 +226,7 @@ def mat_to_texface(operator=None):
     # collect object names for warning messages
     message_a = []
     # Flag if there are non MESH objects selected
-    mixed_obj = 0
+    mixed_obj = False
 
     for ob in bpy.context.selected_editable_objects:
         if ob.type == 'MESH':
@@ -254,7 +255,7 @@ def mat_to_texface(operator=None):
 
             # check materials for warning messages
             mats = ob.material_slots.keys()
-            if operator and not mats and mixed_obj == 0:
+            if operator and not mats and mixed_obj is False:
                 message_a.append(ob.name)
 
             # now we have the images
@@ -281,17 +282,14 @@ def mat_to_texface(operator=None):
             me.update()
         else:
             message_a.append(ob.name)
-            mixed_obj = 1
+            mixed_obj = True
 
     if editmode:
         bpy.ops.object.mode_set(mode='EDIT')
 
-    if operator:
-        if message_a:
-            if mixed_obj == 1:
-                warning_messages(operator, 'MAT_TEX_NO_MESH', message_a)
-            else:
-                warning_messages(operator, 'MAT_TEX_NO_MAT', message_a)
+    if operator and message_a:
+        warn_mess = ('MAT_TEX_NO_MESH' if mixed_obj is True else 'MAT_TEX_NO_MAT')
+        warning_messages(operator, warn_mess, message_a)
 
 
 def assignmatslots(ob, matlist):
@@ -329,7 +327,7 @@ def cleanmatslots(operator=None):
         bpy.ops.object.mode_set()
 
     # is active object selected ?
-    selected = (True if actob.select is True else False)
+    selected = bool(actob.select)
 
     if selected is False:
         actob.select = True
@@ -338,7 +336,7 @@ def cleanmatslots(operator=None):
     # collect all object names for warning_messages
     message_a = []
     # Flag if there are non MESH objects selected
-    mixed_obj = 0
+    mixed_obj = False
 
     for ob in objs:
         if ob.type == 'MESH':
@@ -393,23 +391,20 @@ def cleanmatslots(operator=None):
                     f.material_index = matindex
                     i += 1
             else:
-                message_a.append(ob.name)
+                message_a.append(getattr(ob, "name", "NO NAME"))
                 continue
         else:
-            message_a.append(ob.name)
-            if mixed_obj < 1:
-                mixed_obj += 1
+            message_a.append(getattr(ob, "name", "NO NAME"))
+            if mixed_obj is False:
+                mixed_obj = True
             continue
 
     if message_a and operator:
-        mess = 'C_OB_NO_MAT'
-        if mixed_obj == 1:
-            mess = 'C_OB_MIX_NO_MAT'
-        warning_messages(operator, mess, message_a)
+        warn_mess = ('C_OB_MIX_NO_MAT' if mixed_obj is True else 'C_OB_NO_MAT')
+        warning_messages(operator, warn_mess, message_a)
 
     # restore selection state
-    if selected is False:
-        actob.select = False
+    actob.select = selected
 
     if editmode:
         bpy.ops.object.mode_set(mode='EDIT')
@@ -448,10 +443,9 @@ def assign_mat_mesh_edit(matname="Default", operator=None):
             actob.data.materials.append(target)
 
         # is selected ?
-        selected = (True if actob.select is True else False)
-
-        if selected is False:
-            actob.select = True
+        selected = bool(actob.select)
+        # select active object
+        actob.select = True
 
         # activate the chosen material
         actob.active_material_index = i
@@ -462,13 +456,11 @@ def assign_mat_mesh_edit(matname="Default", operator=None):
         actob.data.update()
 
         # restore selection state
-        if selected is False:
-            actob.select = False
+        actob.select = selected
 
         if operator:
-            if matname in ("", None):
-                matname = "A New Untitled"
-            warning_messages(operator, 'A_MAT_NAME_EDIT', matname, 'MAT')
+            mat_names = ("A New Untitled" if matname in ("", None) else matname)
+            warning_messages(operator, 'A_MAT_NAME_EDIT', mat_names, 'MAT')
 
 
 def assign_mat(matname="Default", operator=None):
@@ -476,10 +468,9 @@ def assign_mat(matname="Default", operator=None):
     actob = bpy.context.active_object
 
     # is active object selected ?
-    selected = (True if actob.select is True else False)
+    selected = bool(actob.select)
 
-    if selected is False:
-        actob.select = True
+    actob.select = True
 
     # check if material exists, if it doesn't then create it
     found = False
@@ -563,13 +554,12 @@ def assign_mat(matname="Default", operator=None):
     bpy.context.scene.objects.active = actob
 
     # restore selection state
-    if selected is False:
-        actob.select = False
+    actob.select = selected
 
     if editmode:
         bpy.ops.object.mode_set(mode='EDIT')
 
-    if message_a and operator:
+    if operator and message_a:
         warning_messages(operator, 'A_OB_MIX_NO_MAT', message_a)
 
 
@@ -670,11 +660,12 @@ def remove_materials(operator=None, setting="SLOT"):
     # SLOT - removes the object's active material
     # ALL - removes the all the object's materials
     actob = bpy.context.active_object
+    actob_name = getattr(actob, "name", "NO NAME")
 
     if actob:
         if not included_object_types(actob.type):
             if operator:
-                warning_messages(operator, 'OB_CANT_MAT', actob.name)
+                warning_messages(operator, 'OB_CANT_MAT', actob_name)
         else:
             if (hasattr(actob.data, "materials") and
                len(actob.data.materials) > 0):
@@ -686,20 +677,18 @@ def remove_materials(operator=None, setting="SLOT"):
                             bpy.ops.object.material_slot_remove()
                         except:
                             pass
+
                 if operator:
-                    warn_mess = 'R_ACT_MAT'
-                    if setting == "ALL":
-                        warn_mess = 'R_ACT_MAT_ALL'
-                    warning_messages(operator, warn_mess, actob.name)
+                    warn_mess = ('R_ACT_MAT_ALL' if setting == "ALL" else 'R_ACT_MAT')
+                    warning_messages(operator, warn_mess, actob_name)
             elif operator:
-                warning_messages(operator, 'R_OB_NO_MAT', actob.name)
+                warning_messages(operator, 'R_OB_NO_MAT', actob_name)
 
 
 def remove_materials_all(operator=None):
     # Remove material slots from all selected objects
-    warn_msg = 'R_ALL_SL_MAT'
-    # counter for material slots warning messages
-    mat_count = 0
+    # counter for material slots warning messages, collect errors
+    mat_count, collect_mess = False, []
 
     for ob in bpy.context.selected_editable_objects:
         if not included_object_types(ob.type):
@@ -710,15 +699,22 @@ def remove_materials_all(operator=None):
 
             if (hasattr(ob.data, "materials") and
                len(ob.material_slots) >= 1):
-                mat_count += 1
+                mat_count = True
 
             for i in range(len(ob.material_slots)):
-                bpy.ops.object.material_slot_remove({'object': ob})
+                try:
+                    bpy.ops.object.material_slot_remove({'object': ob})
+                except:
+                    ob_name = getattr(ob, "name", "NO NAME")
+                    collect_mess.append(ob_name)
+                    pass
 
     if operator:
-        if mat_count == 0:
-            warn_msg = 'R_ALL_NO_MAT'
-        warning_messages(operator, warn_msg)
+        warn_msg = ('R_ALL_NO_MAT' if mat_count is False else 'R_ALL_SL_MAT')
+        if not collect_mess:
+            warning_messages(operator, warn_msg)
+        else:
+            warning_messages(operator, 'R_OB_FAIL_MAT', collect_mess)
 
 
 def cycles_node_on(operator=None):
@@ -840,17 +836,27 @@ class VIEW3D_OT_copy_material_to_selected(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return (context.active_object is not None and
+        return (c_data_has_materials() and
+                context.active_object is not None and
                 included_object_types(context.active_object.type) and
                 context.object.active_material is not None and
                 context.selected_editable_objects)
 
     def execute(self, context):
-        if check_is_excluded_obj_types(context):
-            warning_messages(self, 'CPY_MAT_MIX_OB')
-        elif (len(context.selected_editable_objects) < 2):
-            warning_messages(self, 'CPY_MAT_ONE_OB')
-        bpy.ops.object.material_slot_copy()
+        warn_mess = "DEFAULT"
+        if (len(context.selected_editable_objects) < 2):
+            warn_mess = 'CPY_MAT_ONE_OB'
+        else:
+            if check_is_excluded_obj_types(context):
+                warn_mess = 'CPY_MAT_MIX_OB'
+            try:
+                bpy.ops.object.material_slot_copy()
+                warn_mess = 'CPY_MAT_DONE'
+            except:
+                warning_messages(self, 'CPY_MAT_FAIL')
+                return {'CANCELLED'}
+
+        warning_messages(self, warn_mess)
         return {'FINISHED'}
 
 
@@ -927,7 +933,8 @@ class VIEW3D_OT_clean_material_slots(bpy.types.Operator):
     @classmethod
     # materials can't be removed in Edit mode
     def poll(cls, context):
-        return (context.active_object is not None and
+        return (c_data_has_materials() and
+                context.active_object is not None and
                 not context.object.mode == 'EDIT')
 
     def execute(self, context):
@@ -945,7 +952,8 @@ class VIEW3D_OT_material_to_texface(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None
+        return (c_data_has_materials() and
+                context.active_object is not None)
 
     def execute(self, context):
         if context.selected_editable_objects:
@@ -966,7 +974,8 @@ class VIEW3D_OT_material_remove_slot(bpy.types.Operator):
     @classmethod
     # materials can't be removed in Edit mode
     def poll(cls, context):
-        return (context.active_object is not None and
+        return (c_data_has_materials() and
+                context.active_object is not None and
                 not context.object.mode == 'EDIT')
 
     def execute(self, context):
@@ -988,7 +997,8 @@ class VIEW3D_OT_material_remove_object(bpy.types.Operator):
     @classmethod
     # materials can't be removed in Edit mode
     def poll(cls, context):
-        return (context.active_object is not None and
+        return (c_data_has_materials() and
+                context.active_object is not None and
                 not context.object.mode == 'EDIT')
 
     def execute(self, context):
@@ -1010,7 +1020,8 @@ class VIEW3D_OT_material_remove_all(bpy.types.Operator):
     @classmethod
     # materials can't be removed in Edit mode
     def poll(cls, context):
-        return (context.active_object is not None and
+        return (c_data_has_materials() and
+                context.active_object is not None and
                 not context.object.mode == 'EDIT')
 
     def invoke(self, context, event):
@@ -1038,7 +1049,8 @@ class VIEW3D_OT_select_material_by_name(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None
+        return (c_data_has_materials() and
+                context.active_object is not None)
 
     def execute(self, context):
         mn = self.matname
@@ -1074,6 +1086,10 @@ class VIEW3D_OT_replace_material(bpy.types.Operator):
             default=True,
             )
 
+    @classmethod
+    def poll(cls, context):
+        return c_data_has_materials()
+
     def draw(self, context):
         layout = self.layout
         layout.prop_search(self, "matorg", bpy.data, "materials")
@@ -1085,7 +1101,8 @@ class VIEW3D_OT_replace_material(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        replace_material(self.matorg, self.matrep, self.all_objects, self.update_selection, self)
+        replace_material(self.matorg, self.matrep, self.all_objects,
+                         self.update_selection, self)
         self.matorg, self.matrep = "", ""
         return {'FINISHED'}
 
@@ -1115,6 +1132,10 @@ class VIEW3D_OT_fake_user_set(bpy.types.Operator):
             default='UNUSED',
             )
 
+    @classmethod
+    def poll(cls, context):
+        return c_data_has_materials()
+
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "fake_user", expand=True)
@@ -1136,7 +1157,7 @@ class MATERIAL_OT_mlrestore(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        return c_is_cycles_addon_enabled()
 
     def execute(self, context):
         cycles_node_on(self)
@@ -1279,6 +1300,10 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
     is_not_undo = False     # prevent drawing props on undo
     check_no_name = True    # check if no name is passed
 
+    @classmethod
+    def poll(cls, context):
+        return c_data_has_materials()
+
     def draw(self, context):
         layout = self.layout
         if self.is_not_undo is True:
@@ -1397,6 +1422,10 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
     bl_description = ("Checks if the given path is writeable \n"
                       "(has OS writing privileges)")
     bl_options = {'REGISTER', 'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
 
     def check_valid_path(self, context):
         sc = context.scene

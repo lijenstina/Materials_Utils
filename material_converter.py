@@ -3,7 +3,9 @@
 import bpy
 import mathutils
 from mathutils import Vector
-from .warning_messages_utils import warning_messages
+from .warning_messages_utils import (warning_messages,
+                                     c_is_cycles_addon_enabled,
+                                     c_data_has_materials)
 
 # -----------------------------------------------------------------------------
 # Globals #
@@ -752,6 +754,10 @@ class material_convert_all(bpy.types.Operator):
     bl_description = "Convert All Materials to BI and Cycles Nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return (c_is_cycles_addon_enabled() and c_data_has_materials())
+
     def execute(self, context):
         AutoNode(False, self)
         return {'FINISHED'}
@@ -765,10 +771,12 @@ class material_convert_selected(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return bool(
-            next(
-                (obj for obj in context.selected_objects if obj.type == 'MESH'),
-                None))
+        return (c_data_has_materials() and c_is_cycles_addon_enabled() and
+                bool(
+                    next((obj for obj in context.selected_objects if obj.type == 'MESH'),
+                         None)
+                    )
+                )
 
     def execute(self, context):
         AutoNode(True, self)
