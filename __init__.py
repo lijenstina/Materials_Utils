@@ -322,14 +322,15 @@ def cleanmatslots(operator=None):
     editmode = False
     actob = bpy.context.active_object
 
-    if actob.mode == 'EDIT':
-        editmode = True
-        bpy.ops.object.mode_set()
+    # active object?
+    if actob:
+        if actob.mode == 'EDIT':
+            editmode = True
+            bpy.ops.object.mode_set()
 
-    # is active object selected ?
-    selected = bool(actob.select)
+        # is active object selected ?
+        selected = bool(actob.select)
 
-    if selected is False:
         actob.select = True
 
     objs = bpy.context.selected_editable_objects
@@ -403,11 +404,12 @@ def cleanmatslots(operator=None):
         warn_mess = ('C_OB_MIX_NO_MAT' if mixed_obj is True else 'C_OB_NO_MAT')
         warning_messages(operator, warn_mess, message_a)
 
-    # restore selection state
-    actob.select = selected
+    if actob:
+        # restore selection state
+        actob.select = selected
 
-    if editmode:
-        bpy.ops.object.mode_set(mode='EDIT')
+        if editmode:
+            bpy.ops.object.mode_set(mode='EDIT')
 
 
 # separate edit mode mesh function
@@ -1302,14 +1304,14 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return c_data_has_materials()
+        return (c_data_has_materials() and context.active_object is not None)
 
     def draw(self, context):
         layout = self.layout
         if self.is_not_undo is True:
             boxee = layout.box()
             boxee.prop_search(self, "mat_keep", bpy.data, "materials")
-            boxee.enabled = (True if self.is_auto is False else False)
+            boxee.enabled = not self.is_auto
             layout.separator()
 
             boxs = layout.box()
@@ -1386,8 +1388,7 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         slot.material = base_mat
 
     def check(self, context):
-        if self.is_not_undo is True:
-            return True
+        return self.is_not_undo
 
     def main_loop(self, context):
         for ob in context.scene.objects:
@@ -1470,11 +1471,19 @@ class VIEW3D_MT_assign_material(bpy.types.Menu):
         layout = self.layout
         layout.operator_context = 'INVOKE_REGION_WIN'
 
-        for material_name in bpy.data.materials.keys():
-            layout.operator("view3d.assign_material",
-                            text=material_name,
-                            icon='MATERIAL_DATA').matname = material_name
-        use_separator(self, context)
+        if c_data_has_materials():
+            # no materials
+            for material_name in bpy.data.materials.keys():
+                layout.operator("view3d.assign_material",
+                                text=material_name,
+                                icon='MATERIAL_DATA').matname = material_name
+            use_separator(self, context)
+
+        if (not context.active_object):
+            # info why the add material is innactive
+            layout.label(text="*No active Object in the Scene*", icon="INFO")
+            use_separator(self, context)
+
         layout.operator("view3d.assign_material",
                         text="Add New",
                         icon='ZOOMIN')
@@ -1486,24 +1495,31 @@ class VIEW3D_MT_select_material(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         layout.operator_context = 'INVOKE_REGION_WIN'
-
         ob = context.object
-        layout.label
-        if ob.mode == 'OBJECT':
-            # show all used materials in entire blend file
-            for material_name, material in bpy.data.materials.items():
-                if material.users > 0:
+
+        if (not c_data_has_materials()):
+            # (sad mall music is playing nearby)
+            layout.label(text="*No Materials in the data*", icon="INFO")
+        elif (not ob):
+            # don't worry, i don't like the default cubes, lamps and cameras too
+            layout.label(text="*No Objects to select*", icon="INFO")
+        else:
+            # we did what we could, now you're at the mercy of Python
+            if ob.mode == 'OBJECT':
+                # show all used materials in entire blend file
+                for material_name, material in bpy.data.materials.items():
+                    if (material.users > 0):
+                        layout.operator("view3d.select_material_by_name",
+                                        text=material_name,
+                                        icon='MATERIAL_DATA',
+                                        ).matname = material_name
+            elif ob.mode == 'EDIT':
+                # show only the materials on this object
+                mats = ob.material_slots.keys()
+                for m in mats:
                     layout.operator("view3d.select_material_by_name",
-                                    text=material_name,
-                                    icon='MATERIAL_DATA',
-                                    ).matname = material_name
-        elif ob.mode == 'EDIT':
-            # show only the materials on this object
-            mats = ob.material_slots.keys()
-            for m in mats:
-                layout.operator("view3d.select_material_by_name",
-                                text=m,
-                                icon='MATERIAL_DATA').matname = m
+                                    text=m,
+                                    icon='MATERIAL_DATA').matname = m
 
 
 class VIEW3D_MT_remove_material(bpy.types.Menu):
