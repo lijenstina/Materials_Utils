@@ -15,14 +15,16 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-#  (c) 2016 meta-androcto, parts based on work by Saidenka, Materials Utils by MichaleW,
-#           lijenstina, codemanx, Materials Conversion: Silvio Falcinelli, johnzero7#,
-#           link to base names: Sybren, texture renamer: Yadoob
+#  (c) 2016 meta-androcto, parts based on work by Saidenka, lijenstina
+#           Materials Utils: by MichaleW, lijenstina,
+#                           (some code used from: CoDEmanX, SynaGl0w),
+#           Materials Conversion: Silvio Falcinelli, johnzero7#, others
+#           Link to base names: Sybren, Texture renamer: Yadoob
 
 bl_info = {
     "name": "Materials Specials",
     "author": "Community",
-    "version": (0, 2, 1),
+    "version": (0, 3, 0),
     "blender": (2, 75, 0),
     "location": "Materials Specials Menu/Shift Q",
     "description": "Extended Specials: Materials Properties",
@@ -30,7 +32,7 @@ bl_info = {
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6"
     "/Py/Scripts",
     "tracker_url": "",
-    "category": "Materials"}
+    "category": "Material"}
 
 if "bpy" in locals():
     import importlib
@@ -756,7 +758,6 @@ class VIEW3D_OT_show_mat_preview(bpy.types.Operator):
 
         if self.is_not_undo is True:
             if ob and hasattr(ob, "active_material"):
-
                 mat = ob.active_material
                 is_opaque = (True if (ob and hasattr(ob, "show_transparent") and
                              ob.show_transparent is True)
@@ -846,6 +847,8 @@ class VIEW3D_OT_copy_material_to_selected(bpy.types.Operator):
     def execute(self, context):
         if check_is_excluded_obj_types(context):
             warning_messages(self, 'CPY_MAT_MIX_OB')
+        elif (len(context.selected_editable_objects) < 2):
+            warning_messages(self, 'CPY_MAT_ONE_OB')
         bpy.ops.object.material_slot_copy()
         return {'FINISHED'}
 
@@ -1082,6 +1085,7 @@ class VIEW3D_OT_replace_material(bpy.types.Operator):
 
     def execute(self, context):
         replace_material(self.matorg, self.matrep, self.all_objects, self.update_selection, self)
+        self.matorg, self.matrep = "", ""
         return {'FINISHED'}
 
 
@@ -1141,8 +1145,9 @@ class MATERIAL_OT_mlrestore(bpy.types.Operator):
 class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
     bl_idname = "material.set_transparent_back_side"
     bl_label = "Transparent back (BI)"
-    bl_description = ("Creates BI nodes transparently mesh background \n"
-                      "on Active Object's Active Material Slot")
+    bl_description = ("Creates BI nodes with Alpha output connected to"
+                      "Front/Back Geometry node \n"
+                      "on Object's Active Material Slot")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -1291,6 +1296,7 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
                 if name == self.mat_keep:
                     try:
                         base, suffix = name.rsplit('.', 1)
+                        # trigger the except
                         num = int(suffix, 10)
                         self.mat_keep = base
                         mat.name = self.mat_keep
@@ -1310,6 +1316,7 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         base, suffix = name.rsplit('.', 1)
 
         try:
+            # trigger the except
             num = int(suffix, 10)
         except ValueError:
             # Not a numeric suffix
@@ -1337,7 +1344,7 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         try:
             base_mat = bpy.data.materials[base]
         except KeyError:
-            print('Base material %r not found' % base)
+            print("Link to base names: Base material %r not found" % base)
             return
 
         slot.material = base_mat
@@ -1496,38 +1503,22 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
         layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
         layout.menu("VIEW3D_MT_select_material", icon='HAND')
         use_separator(self, context)
+
         layout.operator("view3d.copy_material_to_selected", icon="COPY_ID")
+        use_separator(self, context)
 
-        if c_render_engine("Cycles"):
-            # Cycles
-            use_separator(self, context)
-            layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-            use_separator(self, context)
+        layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
+        use_separator(self, context)
 
-            layout.operator("view3d.replace_material",
-                            text='Replace Material',
-                            icon='ARROW_LEFTRIGHT')
-            layout.operator("view3d.fake_user_set",
-                            text='Set Fake User',
-                            icon='UNPINNED')
+        layout.operator("view3d.replace_material",
+                        text='Replace Material',
+                        icon='ARROW_LEFTRIGHT')
+        layout.operator("view3d.fake_user_set",
+                        text='Set Fake User',
+                        icon='UNPINNED')
+        use_separator(self, context)
 
-        elif c_render_engine("BI"):
-            # Blender Internal
-            use_separator(self, context)
-
-            layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-            use_separator(self, context)
-
-            layout.operator("view3d.replace_material",
-                            text='Replace Material',
-                            icon='ARROW_LEFTRIGHT')
-            layout.operator("view3d.fake_user_set",
-                            text='Set Fake User',
-                            icon='UNPINNED')
-
-        if not c_render_engine("OTHER"):
-            use_separator(self, context)
-            layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
+        layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
 
 class VIEW3D_MT_mat_special(bpy.types.Menu):
@@ -1757,7 +1748,7 @@ class MATERIAL_MT_biconv_help(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.label("Save Your Work Often", icon="ERROR")
+        layout.label(text="Save Your Work Often", icon="ERROR")
         use_separator(self, context)
         layout.label(text="Select the texture loaded in the image node")
         layout.label(text="Press Ctrl/T to create the image nodes")
@@ -1765,9 +1756,13 @@ class MATERIAL_MT_biconv_help(bpy.types.Menu):
         layout.label(text="Enable Node Wrangler addon", icon="NODETREE")
         layout.label(text="If Unconnected or No Image Node Error:", icon="MOD_EXPLODE")
         use_separator(self, context)
+        layout.label(text="The default path is the folder where the current .blend is")
+        layout.label(text="During Baking, the script will check writting privileges")
+        layout.label(text="Set the save path for extracting images with full access")
         layout.label(text="May Require Run As Administrator on Windows OS", icon="ERROR")
         layout.label(text="Converts Bi Textures to Image Files:", icon="MOD_EXPLODE")
         use_separator(self, context)
+        layout.label(text="The Converter report can point out to some failures")
         layout.label(text="Some material combinations are unsupported")
         layout.label(text="Single BI Texture/Image per convert is only supported")
         layout.label(text="Converts Basic BI non node materials to Cycles")
@@ -1783,7 +1778,10 @@ class MATERIAL_MT_nodeconv_help(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.label("Save Your Work Often", icon="ERROR")
+        layout.label(text="Save Your Work Often", icon="ERROR")
+        use_separator(self, context)
+        layout.label(text="Relinking and removing some not needed nodes")
+        layout.label(text="The result Node tree will need some cleaning up")
         use_separator(self, context)
         layout.label(text="Select the texture loaded in the image node")
         layout.label(text="Press Ctrl/T to create the image nodes")
@@ -1791,6 +1789,8 @@ class MATERIAL_MT_nodeconv_help(bpy.types.Menu):
         layout.label(text="Enable Node Wrangler addon", icon="NODETREE")
         layout.label(text="If Unconnected or No Image Node Error:", icon="MOD_EXPLODE")
         use_separator(self, context)
+        layout.label(text="Generated images (i.e. Noise and others) are not converted")
+        layout.label(text="The Converter report can point out to some failures")
         layout.label(text="Not all Files will produce good results", icon="ERROR")
         layout.label(text="fbx, .dae, .obj, .3ds, .xna and more")
         layout.label(text="**Supports Imported Files**:", icon="IMPORT")
@@ -2001,14 +2001,6 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
 # -----------------------------------------------------------------------------
 # utility functions:
 
-# Draw Separator #
-def use_separator(operator, context):
-    # pass the preferences show_separators bool to enable/disable them
-    useSep = bpy.context.user_preferences.addons[__name__].preferences.show_separators
-    if useSep:
-        operator.layout.separator()
-
-
 def included_object_types(objects):
     # Pass the bpy.data.objects.type to avoid needless assigning/removing
     # included - type that can have materials
@@ -2028,7 +2020,7 @@ def check_is_excluded_obj_types(contxt):
 
 
 def check_texface_to_mat(obj):
-    # check for data presence
+    # check for UV data presence
     if obj:
         if hasattr(obj.data, "uv_textures"):
             if hasattr(obj.data.uv_textures, "active"):
@@ -2039,19 +2031,24 @@ def check_texface_to_mat(obj):
 
 def c_context_mat_preview():
     # returns the type of viewport shading
-    # because using the optional UI elements the context is lost it needs this check
-    areas = bpy.context.screen.areas
+    # needed for using the optional UI elements (the context gets lost)
 
-    for area in areas:
-        if area.type == 'VIEW_3D':
-            return area.spaces.active.viewport_shade
+    # code from BA user SynaGl0w
+    # if there are multiple 3d views return the biggest screen area one
+    views_3d = [area for area in bpy.context.screen.areas if
+                area.type == 'VIEW_3D' and area.spaces.active]
+
+    if views_3d:
+        main_view_3d = max(views_3d, key=lambda area: area.width * area.height)
+        return main_view_3d.spaces.active.viewport_shade
     return "NONE"
 
 
 def c_context_use_nodes():
     # checks if Use Nodes is ticked on
     actob = bpy.context.active_object
-    u_node = (actob.active_material.use_nodes if hasattr(actob, "active_material") else False)
+    u_node = (actob.active_material.use_nodes if
+              hasattr(actob, "active_material") else False)
 
     return bool(u_node)
 
@@ -2067,7 +2064,7 @@ def c_render_engine(cyc=None):
             return True
         elif cyc == "BI" and render_engine == 'BLENDER_RENDER':
             return True
-        elif cyc == "Other" and render_engine not in ['CYCLES', 'BLENDER_RENDER']:
+        elif cyc == "Other" and render_engine not in ('CYCLES', 'BLENDER_RENDER'):
             return True
         return False
     return render_engine
@@ -2088,29 +2085,45 @@ def c_need_of_viewport_colors():
     return False
 
 
-def use_remove_mat_all():
+# preferences utilities #
+
+def return_preferences():
     pref = bpy.context.user_preferences.addons[__name__].preferences
+    return pref
+
+
+# Draw Separator #
+def use_separator(operator, context):
+    # pass the preferences show_separators bool to enable/disable them
+    pref = return_preferences()
+    useSep = pref.show_separators
+    if useSep:
+        operator.layout.separator()
+
+
+def use_remove_mat_all():
+    pref = return_preferences()
     show_rmv_mat = pref.show_remove_mat
 
     return bool(show_rmv_mat)
 
 
 def use_mat_preview():
-    pref = bpy.context.user_preferences.addons[__name__].preferences
+    pref = return_preferences()
     show_mat_prw = pref.show_mat_preview
 
     return bool(show_mat_prw)
 
 
 def use_cleanmat_slots():
-    pref = bpy.context.user_preferences.addons[__name__].preferences
+    pref = return_preferences()
     use_mat_clean = pref.set_cleanmatslots
 
     return bool(use_mat_clean)
 
 
 def size_preview():
-    pref = bpy.context.user_preferences.addons[__name__].preferences
+    pref = return_preferences()
     set_size_prw = pref.set_preview_size
 
     cell_w = int(set_size_prw[0])
@@ -2121,14 +2134,14 @@ def size_preview():
 
 
 def size_type_is_preview():
-    pref = bpy.context.user_preferences.addons[__name__].preferences
+    pref = return_preferences()
     set_prw_type = pref.set_preview_type
 
     return bool(set_prw_type in {'PREVIEW'})
 
 
 def enable_converters():
-    pref = bpy.context.user_preferences.addons[__name__].preferences
+    pref = return_preferences()
     shw_conv = pref.show_converters
 
     return shw_conv
