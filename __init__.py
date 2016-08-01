@@ -889,7 +889,7 @@ class VIEW3D_OT_assign_material(bpy.types.Operator):
             name='Material Name',
             description='Name of Material to Assign',
             default="",
-            maxlen=63,
+            maxlen=128,
             )
 
     @classmethod
@@ -1168,21 +1168,25 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
     def execute(self, context):
         obj = context.active_object
         mat = obj.active_material
-        mat.use_nodes = True
-        if (mat.node_tree):
-            for node in mat.node_tree.nodes:
-                if (node):
-                    mat.node_tree.nodes.remove(node)
+        try:
+            mat.use_nodes = True
+            if (mat.node_tree):
+                for node in mat.node_tree.nodes:
+                    if (node):
+                        mat.node_tree.nodes.remove(node)
 
-        mat.use_transparency = True
-        node_mat = mat.node_tree.nodes.new('ShaderNodeMaterial')
-        node_out = mat.node_tree.nodes.new('ShaderNodeOutput')
-        node_geo = mat.node_tree.nodes.new('ShaderNodeGeometry')
-        node_mat.material = mat
-        node_out.location = [node_out.location[0] + 500, node_out.location[1]]
-        node_geo.location = [node_geo.location[0] + 150, node_geo.location[1] - 150]
-        mat.node_tree.links.new(node_mat.outputs[0], node_out.inputs[0])
-        mat.node_tree.links.new(node_geo.outputs[8], node_out.inputs[1])
+            mat.use_transparency = True
+            node_mat = mat.node_tree.nodes.new('ShaderNodeMaterial')
+            node_out = mat.node_tree.nodes.new('ShaderNodeOutput')
+            node_geo = mat.node_tree.nodes.new('ShaderNodeGeometry')
+            node_mat.material = mat
+            node_out.location = [node_out.location[0] + 500, node_out.location[1]]
+            node_geo.location = [node_geo.location[0] + 150, node_geo.location[1] - 150]
+            mat.node_tree.links.new(node_mat.outputs[0], node_out.inputs[0])
+            mat.node_tree.links.new(node_geo.outputs[8], node_out.inputs[1])
+        except:
+            warning_messages(self, 'E_MAT_TRNSP_BACK')
+            return {'CANCELLED'}
 
         if hasattr(mat, "name"):
             warning_messages(self, 'MAT_TRNSP_BACK', mat.name, 'MAT')
@@ -1478,15 +1482,19 @@ class VIEW3D_MT_remove_material(bpy.types.Menu):
                         icon='COLOR_BLUE')
         use_separator(self, context)
 
-        layout.operator("view3d.material_remove_slot", icon='COLOR_GREEN')
-        layout.operator("view3d.material_remove_object", icon='COLOR_RED')
+        if not c_render_engine("Lux"):
+            layout.operator("view3d.material_remove_slot", icon='COLOR_GREEN')
+            layout.operator("view3d.material_remove_object", icon='COLOR_RED')
 
-        if use_remove_mat_all():
-            use_separator(self, context)
-            layout.operator("view3d.material_remove_all",
-                            text="Remove Material Slots "
-                            "(All Selected Objects)",
-                            icon='CANCEL')
+            if use_remove_mat_all():
+                use_separator(self, context)
+                layout.operator("view3d.material_remove_all",
+                                text="Remove Material Slots "
+                                "(All Selected Objects)",
+                                icon='CANCEL')
+        else:
+            layout.label(text="Sorry, other Menu functions are", icon="INFO")
+            layout.label(text="unvailable with Lux Renderer")
 
 
 class VIEW3D_MT_master_material(bpy.types.Menu):
@@ -1496,7 +1504,7 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
         layout = self.layout
         layout.operator_context = 'INVOKE_REGION_WIN'
 
-        if use_mat_preview():
+        if use_mat_preview() is True:
             layout.operator("view3d.show_mat_preview", icon="VISIBLE_IPO_ON")
             use_separator(self, context)
 
@@ -2055,7 +2063,7 @@ def c_context_use_nodes():
 
 def c_render_engine(cyc=None):
     # returns the active Renderer if not cyc is used
-    # valid cyc inputs "Cycles", "BI", "Other"
+    # valid cyc inputs "Cycles", "BI", "Other", "Lux"
     scene = bpy.context.scene
     render_engine = scene.render.engine
 
@@ -2065,6 +2073,8 @@ def c_render_engine(cyc=None):
         elif cyc == "BI" and render_engine == 'BLENDER_RENDER':
             return True
         elif cyc == "Other" and render_engine not in ('CYCLES', 'BLENDER_RENDER'):
+            return True
+        elif cyc == "Lux" and render_engine == "LUXRENDER_RENDER":
             return True
         return False
     return render_engine
