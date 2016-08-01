@@ -32,7 +32,8 @@ bl_info = {
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6"
     "/Py/Scripts",
     "tracker_url": "",
-    "category": "Material"}
+    "category": "Material"
+        }
 
 if "bpy" in locals():
     import importlib
@@ -774,7 +775,7 @@ class VIEW3D_OT_show_mat_preview(bpy.types.Operator):
                     layout.template_ID(ob, "active_material", new="material.new")
                 layout.separator()
 
-                if not c_render_engine("Other"):
+                if c_render_engine("Both"):
                     layout.prop(mat, "use_nodes", icon='NODETREE')
 
                 if c_need_of_viewport_colors():
@@ -813,7 +814,7 @@ class VIEW3D_OT_show_mat_preview(bpy.types.Operator):
                             col.prop(mat.game_settings, "alpha_blend", text="")
                     layout.separator()
                 else:
-                    other_render = ("*Unavailable with this Renderer*" if c_render_engine("Other")
+                    other_render = ("*Unavailable with this Renderer*" if not c_render_engine("Both")
                                     else "*Unavailable in this Context*")
                     no_col_label = ("*Only available in Solid Shading*" if c_render_engine("Cycles")
                                     else other_render)
@@ -1099,7 +1100,7 @@ class VIEW3D_OT_fake_user_set(bpy.types.Operator):
             name="Fake User",
             description="Turn fake user on or off",
             items=(('ON', "On", "Enable fake user"), ('OFF', "Off", "Disable fake user")),
-            default='ON'
+            default='ON',
             )
 
     materials = EnumProperty(
@@ -1111,7 +1112,7 @@ class VIEW3D_OT_fake_user_set(bpy.types.Operator):
                    ('USED', "Used", "All materials used by objects"),
                    ('UNUSED', "Unused", "Currently unused materials"),
                    ('ALL', "All", "All materials in this blend file")),
-            default='UNUSED'
+            default='UNUSED',
             )
 
     def draw(self, context):
@@ -1262,12 +1263,18 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
                       "Material/Name on All Materials/Objects")
     bl_options = {'REGISTER', 'UNDO'}
 
-    mat_keep = StringProperty(name="Material to keep",
-                              default="")
-    is_auto = BoolProperty(name="Auto Rename/Replace",
-                           description=("Automatically Replace names "
-                                        "by stripping numerical suffix"),
-                           default=False)
+    mat_keep = StringProperty(
+                name="Material to keep",
+                default="",
+                )
+
+    is_auto = BoolProperty(
+                name="Auto Rename/Replace",
+                description=("Automatically Replace names "
+                             "by stripping numerical suffix"),
+                default=False,
+               )
+
     mat_error = []          # collect mat for warning messages
     is_not_undo = False     # prevent drawing props on undo
     check_no_name = True    # check if no name is passed
@@ -1580,66 +1587,34 @@ def menu_func(self, context):
     layout = self.layout
     layout.operator_context = 'INVOKE_REGION_WIN'
 
-    if context.scene.render.engine == "CYCLES":
-        # Cycles
-        use_separator(self, context)
-        layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
-        layout.menu("VIEW3D_MT_select_material", icon='HAND')
-        layout.operator("view3d.replace_material",
-                        text='Replace Material',
-                        icon='ARROW_LEFTRIGHT')
-        use_separator(self, context)
+    use_separator(self, context)
+    layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
+    layout.menu("VIEW3D_MT_select_material", icon='HAND')
+    layout.operator("view3d.replace_material",
+                    text='Replace Material',
+                    icon='ARROW_LEFTRIGHT')
+    use_separator(self, context)
 
-        layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-        use_separator(self, context)
+    layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
+    use_separator(self, context)
 
-        layout.operator("view3d.fake_user_set",
-                        text='Set Fake User',
-                        icon='UNPINNED')
-        use_separator(self, context)
+    layout.operator("view3d.fake_user_set",
+                    text='Set Fake User',
+                    icon='UNPINNED')
+    use_separator(self, context)
 
-        layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
-
-    elif context.scene.render.engine == "BLENDER_RENDER":
-        # Blender Internal
-        use_separator(self, context)
-        layout.menu("VIEW3D_MT_assign_material", icon='ZOOMIN')
-        layout.menu("VIEW3D_MT_select_material", icon='HAND')
-        layout.operator("view3d.replace_material",
-                        text='Replace Material',
-                        icon='ARROW_LEFTRIGHT')
-        use_separator(self, context)
-
-        layout.menu("VIEW3D_MT_remove_material", icon="COLORSET_10_VEC")
-        use_separator(self, context)
-
-        layout.operator("view3d.fake_user_set",
-                        text='Set Fake User',
-                        icon='UNPINNED')
-        use_separator(self, context)
-
-        layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
+    layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
 
 def menu_move(self, context):
     layout = self.layout
     layout.operator_context = 'INVOKE_REGION_WIN'
 
-    if context.scene.render.engine == "CYCLES":
-        # Cycles
-        layout.operator("material.move_material_slot_top",
-                        icon='TRIA_UP', text="Slot to top")
-        layout.operator("material.move_material_slot_bottom",
-                        icon='TRIA_DOWN', text="Slot to bottom")
-        use_separator(self, context)
-
-    elif context.scene.render.engine == "BLENDER_RENDER":
-        # Blender Internal
-        layout.operator("material.move_material_slot_top",
-                        icon='TRIA_UP', text="Slot to top")
-        layout.operator("material.move_material_slot_bottom",
-                        icon='TRIA_DOWN', text="Slot to bottom")
-        use_separator(self, context)
+    layout.operator("material.move_material_slot_top",
+                    icon='TRIA_UP', text="Slot to top")
+    layout.operator("material.move_material_slot_bottom",
+                    icon='TRIA_DOWN', text="Slot to bottom")
+    use_separator(self, context)
 
 
 # Converters Menu's #
@@ -1847,21 +1822,21 @@ class material_specials_scene_props(bpy.types.PropertyGroup):
             description=("Path to save images during conversion \n"
                          "Default is the location of the blend file"),
             default="//",
-            subtype='DIR_PATH'
+            subtype='DIR_PATH',
             )
     EXTRACT_ALPHA = BoolProperty(
-            attr="EXTRACT_ALPHA", default=False
+            attr="EXTRACT_ALPHA", default=False,
             )
     SET_FAKE_USER = BoolProperty(
-            attr="SET_FAKE_USER", default=False
+            attr="SET_FAKE_USER", default=False,
             )
     EXTRACT_PTEX = BoolProperty(
-            attr="EXTRACT_PTEX", default=False
+            attr="EXTRACT_PTEX", default=False,
             )
     EXTRACT_OW = BoolProperty(
             attr="Overwrite",
             default=False,
-            description="Extract textures again instead of re-using priorly extracted textures"
+            description="Extract textures again instead of re-using priorly extracted textures",
             )
     img_bake_size = EnumProperty(
             name="Bake Image Size",
@@ -1880,96 +1855,95 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     show_warnings = bpy.props.BoolProperty(
-        name="Enable Warning messages",
-        default=False,
-        description="Show warning messages \n"
-                    "when an action is executed or failed.\n \n"
-                    "Advisable if you don't know how the tool works",
-    )
+            name="Enable Warning messages",
+            default=False,
+            description="Show warning messages \n"
+                        "when an action is executed or failed.\n \n"
+                        "Advisable if you don't know how the tool works",
+            )
 
     show_remove_mat = bpy.props.BoolProperty(
-        name="Enable Remove all Materials",
-        default=False,
-        description="Enable Remove all Materials \n"
-                    "for all Selected Objects \n \n"
-                    "Use with care - if you want to keep materials after \n"
-                    "closing \ reloading Blender Set Fake User for them",
-    )
+            name="Enable Remove all Materials",
+            default=False,
+            description="Enable Remove all Materials \n"
+                        "for all Selected Objects \n \n"
+                        "Use with care - if you want to keep materials after \n"
+                        "closing \ reloading Blender Set Fake User for them",
+            )
 
     show_mat_preview = bpy.props.BoolProperty(
-        name="Enable Material Preview",
-        default=True,
-        description="Material Preview of the Active Object \n"
-                    "Contains the preview of the active Material, \n"
-                    "Use nodes, Color, Specular and Transparency \n"
-                    "settings depending on the Context and Preferences",
-    )
+            name="Enable Material Preview",
+            default=True,
+            description="Material Preview of the Active Object \n"
+                        "Contains the preview of the active Material, \n"
+                        "Use nodes, Color, Specular and Transparency \n"
+                        "settings depending on the Context and Preferences",
+            )
 
     set_cleanmatslots = bpy.props.BoolProperty(
-        name="Enable Auto Clean",
-        default=True,
-        description="Enable Automatic Removal of unused Material Slots \n"
-                    "called together with the Assign Material menu option. \n \n"
-                    "Apart from preference and the cases when it affects \n"
-                    "adding materials, enabling it can have some \n"
-                    "performance impact on very dense meshes",
-    )
+            name="Enable Auto Clean",
+            default=True,
+            description="Enable Automatic Removal of unused Material Slots \n"
+                        "called together with the Assign Material menu option. \n \n"
+                        "Apart from preference and the cases when it affects \n"
+                        "adding materials, enabling it can have some \n"
+                        "performance impact on very dense meshes",
+            )
 
     show_separators = bpy.props.BoolProperty(
-        name="Use Separators in the menus",
-        default=True,
-        description="Use separators in the menus, a trade-off between \n"
-                    "readability vs. using more space for displaying items"
-    )
+            name="Use Separators in the menus",
+            default=True,
+            description="Use separators in the menus, a trade-off between \n"
+                        "readability vs. using more space for displaying items",
+            )
 
     show_converters = bpy.props.BoolProperty(
-        name="Enable Converters",
-        default=True,
-        description=" \n"
-                    ""
-    )
+            name="Enable Converters",
+            default=True,
+            description=" \n  ",
+            )
 
     set_preview_size = bpy.props.EnumProperty(
-        name="Preview Menu Size",
-        description="Set the preview menu size \n"
-                    "depending on the number of materials \n"
-                    "in the scene (width and height)",
-        items=(('2x2', "Size 2x2", "Width 2 Height 2"),
-               ('2x3', "Size 2x3", "Width 3 Height 2"),
-               ('3x3', "Size 3x3", "Width 3 Height 3"),
-               ('3x4', "Size 3x4", "Width 4 Height 3"),
-               ('4x4', "Size 4x4", "Width 4 Height 4"),
-               ('5x5', "Size 5x5", "Width 5 Height 5"),
-               ('6x6', "Size 6x6", "Width 6 Height 6"),
-               ('0x0', "List", "Display as a List")),
-        default='3x3',
-    )
+            name="Preview Menu Size",
+            description="Set the preview menu size \n"
+                        "depending on the number of materials \n"
+                        "in the scene (width and height)",
+            items=(('2x2', "Size 2x2", "Width 2 Height 2"),
+                   ('2x3', "Size 2x3", "Width 3 Height 2"),
+                   ('3x3', "Size 3x3", "Width 3 Height 3"),
+                   ('3x4', "Size 3x4", "Width 4 Height 3"),
+                   ('4x4', "Size 4x4", "Width 4 Height 4"),
+                   ('5x5', "Size 5x5", "Width 5 Height 5"),
+                   ('6x6', "Size 6x6", "Width 6 Height 6"),
+                   ('0x0', "List", "Display as a List")),
+            default='3x3',
+            )
 
     set_preview_type = bpy.props.EnumProperty(
-        name="Preview Menu Type",
-        description="Set the the Preview menu type \n",
-        items=(('LIST', "Classic",
-                "Display as a Classic List like in Blender Propreties. \n \n"
-                "Preview of Active Material not available"),
-               ('PREVIEW', "Preview Display",
-                "Display as a preview of Thumbnails \n"
-                "It can have some performance issues with \n"
-                "scenes containing a lot of materials \n \n"
-                "Preview of Active Material available")),
-        default='PREVIEW',
-    )
+            name="Preview Menu Type",
+            description="Set the the Preview menu type \n",
+            items=(('LIST', "Classic",
+                    "Display as a Classic List like in Blender Propreties. \n \n"
+                    "Preview of Active Material not available"),
+                   ('PREVIEW', "Preview Display",
+                    "Display as a preview of Thumbnails \n"
+                    "It can have some performance issues with \n"
+                    "scenes containing a lot of materials \n \n"
+                    "Preview of Active Material available")),
+            default='PREVIEW',
+            )
 
     set_experimental_type = bpy.props.EnumProperty(
-        name="Experimental Features",
-        description=" \n",
-        items=(('ALL', "All Converters",
-                "Enable all Converters"),
-               ('CYC_CONV', "BI and Cycles Nodes",
-                "Enable Cycles related Convert"),
-               ('BI_CONV', "BI To Cycles",
-                "Enable Blender Internal related Converters")),
-        default='ALL',
-    )
+            name="Experimental Features",
+            description=" \n",
+            items=(('ALL', "All Converters",
+                    "Enable all Converters"),
+                   ('CYC_CONV', "BI and Cycles Nodes",
+                    "Enable Cycles related Convert"),
+                   ('BI_CONV', "BI To Cycles",
+                    "Enable Blender Internal related Converters")),
+            default='ALL',
+            )
 
     def draw(self, context):
         layout = self.layout
@@ -2062,21 +2036,16 @@ def c_context_use_nodes():
 
 
 def c_render_engine(cyc=None):
-    # returns the active Renderer if not cyc is used
-    # valid cyc inputs "Cycles", "BI", "Other", "Lux"
+    # valid cyc inputs "Cycles", "BI", "Both", "Lux"
     scene = bpy.context.scene
     render_engine = scene.render.engine
 
+    r_engines = {"Cycles": 'CYCLES',
+                 "BI": 'BLENDER_RENDER',
+                 "Both": ('CYCLES', 'BLENDER_RENDER'),
+                 "Lux": 'LUXRENDER_RENDER'}
     if cyc:
-        if cyc == "Cycles" and render_engine == 'CYCLES':
-            return True
-        elif cyc == "BI" and render_engine == 'BLENDER_RENDER':
-            return True
-        elif cyc == "Other" and render_engine not in ('CYCLES', 'BLENDER_RENDER'):
-            return True
-        elif cyc == "Lux" and render_engine == "LUXRENDER_RENDER":
-            return True
-        return False
+        return (True if cyc in r_engines and render_engine in r_engines[cyc] else False)
     return render_engine
 
 
@@ -2084,22 +2053,14 @@ def c_need_of_viewport_colors():
     # check the context where using Viewport color and friends are needed
     # Cycles and BI are supported
     if c_render_engine("Cycles"):
-        if c_context_use_nodes():
-            if c_context_mat_preview() == 'SOLID':
-                return True
+        if c_context_use_nodes() and c_context_mat_preview() == 'SOLID':
+            return True
         elif c_context_mat_preview() in ('SOLID', 'TEXTURED', 'MATERIAL'):
             return True
-    elif c_render_engine("BI"):
-        if not c_context_use_nodes():
-            return True
+    elif (c_render_engine("BI") and not c_context_use_nodes()):
+        return True
+
     return False
-
-
-# preferences utilities #
-
-def return_preferences():
-    pref = bpy.context.user_preferences.addons[__name__].preferences
-    return pref
 
 
 # Draw Separator #
@@ -2109,6 +2070,12 @@ def use_separator(operator, context):
     useSep = pref.show_separators
     if useSep:
         operator.layout.separator()
+
+
+# preferences utilities #
+
+def return_preferences():
+    return bpy.context.user_preferences.addons[__name__].preferences
 
 
 def use_remove_mat_all():
@@ -2159,7 +2126,7 @@ def enable_converters():
 
 def converter_type(types='ALL'):
     # checks the type of the preferences 'ALL', 'CYC_CONV', 'BI_CONV'
-    pref = bpy.context.user_preferences.addons[__name__].preferences
+    pref = return_preferences()
     set_exp_type = pref.set_experimental_type
 
     return bool(set_exp_type in {'ALL'} or types == set_exp_type)
