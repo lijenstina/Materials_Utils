@@ -3,8 +3,18 @@
 
 import bpy
 
+# -----------------------------------------------------------------------------
+# Globals #
+
+# change the name for the properties settings
 MAT_SPEC_NAME = "materials_specials"
 
+# collect messages for the report operator
+COLLECT_REPORT = []
+
+
+# -----------------------------------------------------------------------------
+# Functions #
 
 def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None, fake=""):
     # Enter warning messages to the message dictionary
@@ -99,6 +109,22 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             }
 
         operator.report({'INFO'}, message[warn])
+
+
+def collect_report(collection="", is_final=False):
+    # collection passes a string for appending to COLLECT_REPORT global
+    # is_final swithes to the final report with the operator in __init__
+    global COLLECT_REPORT
+
+    if collection and type(collection) is str:
+        COLLECT_REPORT.append(collection)
+        print(collection)
+
+    if is_final:
+        # final operator pass uses * as delimiter for splitting into new lines
+        messages = "*".join(COLLECT_REPORT)
+        bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
+        COLLECT_REPORT = []
 
 
 # -----------------------------------------------------------------------------

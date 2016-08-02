@@ -33,8 +33,7 @@ bl_info = {
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6"
     "/Py/Scripts",
     "tracker_url": "",
-    "category": "Material"
-        }
+    "category": "Material"}
 
 if "bpy" in locals():
     import importlib
@@ -49,12 +48,29 @@ else:
     from . import warning_messages_utils
 
 import bpy
-from bpy.props import StringProperty, BoolProperty, EnumProperty
 import os
-from os import path, access
-from .warning_messages_utils import (warning_messages,
-                                     c_is_cycles_addon_enabled,
-                                     c_data_has_materials)
+from os import (
+            path as os_path,
+            access as os_access,
+            remove as os_remove,
+            )
+from bpy.props import (
+            StringProperty,
+            BoolProperty,
+            EnumProperty,
+            )
+from bpy.types import (
+            Menu,
+            Operator,
+            Panel,
+            AddonPreferences,
+            PropertyGroup,
+            )
+from .warning_messages_utils import (
+            warning_messages,
+            c_is_cycles_addon_enabled,
+            c_data_has_materials,
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -703,9 +719,14 @@ def remove_materials_all(operator=None):
                len(ob.material_slots) >= 1):
                 mat_count = True
 
+            # Ctx - copy the context for operator override
+            Ctx = bpy.context.copy()
+            # for this operator it needs only the active object replaced
+            Ctx['object'] = ob
+
             for i in range(len(ob.material_slots)):
                 try:
-                    bpy.ops.object.material_slot_remove({'object': ob})
+                    bpy.ops.object.material_slot_remove(Ctx)
                 except:
                     ob_name = getattr(ob, "name", "NO NAME")
                     collect_mess.append(ob_name)
@@ -731,7 +752,7 @@ def cycles_node_on(operator=None):
 # -----------------------------------------------------------------------------
 # Operator Classes #
 
-class VIEW3D_OT_show_mat_preview(bpy.types.Operator):
+class VIEW3D_OT_show_mat_preview(Operator):
     bl_label = "Preview Active Material"
     bl_idname = "view3d.show_mat_preview"
     bl_description = ("Show the preview of Active Material \n"
@@ -829,7 +850,7 @@ class VIEW3D_OT_show_mat_preview(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_copy_material_to_selected(bpy.types.Operator):
+class VIEW3D_OT_copy_material_to_selected(Operator):
     bl_idname = "view3d.copy_material_to_selected"
     bl_label = "Copy Materials to others"
     bl_description = ("Copy Material From Active to Selected objects \n"
@@ -862,7 +883,7 @@ class VIEW3D_OT_copy_material_to_selected(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_texface_to_material(bpy.types.Operator):
+class VIEW3D_OT_texface_to_material(Operator):
     bl_idname = "view3d.texface_to_material"
     bl_label = "Texface Images to Material/Texture"
     bl_description = ("Create texture materials for images assigned in UV editor \n"
@@ -886,7 +907,7 @@ class VIEW3D_OT_texface_to_material(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class VIEW3D_OT_assign_material(bpy.types.Operator):
+class VIEW3D_OT_assign_material(Operator):
     bl_idname = "view3d.assign_material"
     bl_label = "Assign Material"
     bl_description = "Assign a material to the selection"
@@ -895,8 +916,8 @@ class VIEW3D_OT_assign_material(bpy.types.Operator):
     is_edit = False
 
     matname = StringProperty(
-            name='Material Name',
-            description='Name of Material to Assign',
+            name="Material Name",
+            description="Name of Material to Assign",
             default="",
             maxlen=128,
             )
@@ -925,7 +946,7 @@ class VIEW3D_OT_assign_material(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_clean_material_slots(bpy.types.Operator):
+class VIEW3D_OT_clean_material_slots(Operator):
     bl_idname = "view3d.clean_material_slots"
     bl_label = "Clean Material Slots"
     bl_description = ("Removes any unused material slots \n"
@@ -944,7 +965,7 @@ class VIEW3D_OT_clean_material_slots(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_material_to_texface(bpy.types.Operator):
+class VIEW3D_OT_material_to_texface(Operator):
     bl_idname = "view3d.material_to_texface"
     bl_label = "Material Images to Texface"
     bl_description = ("Transfer material assignments to UV editor \n"
@@ -966,7 +987,7 @@ class VIEW3D_OT_material_to_texface(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class VIEW3D_OT_material_remove_slot(bpy.types.Operator):
+class VIEW3D_OT_material_remove_slot(Operator):
     bl_idname = "view3d.material_remove_slot"
     bl_label = "Remove Active Slot (Active Object)"
     bl_description = ("Remove active material slot from active object\n"
@@ -989,7 +1010,7 @@ class VIEW3D_OT_material_remove_slot(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class VIEW3D_OT_material_remove_object(bpy.types.Operator):
+class VIEW3D_OT_material_remove_object(Operator):
     bl_idname = "view3d.material_remove_object"
     bl_label = "Remove all Slots (Active Object)"
     bl_description = ("Remove all material slots from active object\n"
@@ -1012,7 +1033,7 @@ class VIEW3D_OT_material_remove_object(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class VIEW3D_OT_material_remove_all(bpy.types.Operator):
+class VIEW3D_OT_material_remove_all(Operator):
     bl_idname = "view3d.material_remove_all"
     bl_label = "Remove All Material Slots"
     bl_description = ("Remove all material slots from all selected objects \n"
@@ -1038,7 +1059,7 @@ class VIEW3D_OT_material_remove_all(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class VIEW3D_OT_select_material_by_name(bpy.types.Operator):
+class VIEW3D_OT_select_material_by_name(Operator):
     bl_idname = "view3d.select_material_by_name"
     bl_label = "Select Material By Name"
     bl_description = "Select geometry with this material assigned to it"
@@ -1061,7 +1082,7 @@ class VIEW3D_OT_select_material_by_name(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_replace_material(bpy.types.Operator):
+class VIEW3D_OT_replace_material(Operator):
     bl_idname = "view3d.replace_material"
     bl_label = "Replace Material"
     bl_description = "Replace a material by name"
@@ -1109,7 +1130,7 @@ class VIEW3D_OT_replace_material(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class VIEW3D_OT_fake_user_set(bpy.types.Operator):
+class VIEW3D_OT_fake_user_set(Operator):
     bl_idname = "view3d.fake_user_set"
     bl_label = "Set Fake User"
     bl_description = "Enable/disable fake user for materials"
@@ -1151,7 +1172,7 @@ class VIEW3D_OT_fake_user_set(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MATERIAL_OT_mlrestore(bpy.types.Operator):
+class MATERIAL_OT_mlrestore(Operator):
     bl_idname = "cycles.restore"
     bl_label = "Restore Cycles"
     bl_description = "Switch Back to Cycles Nodes"
@@ -1166,7 +1187,7 @@ class MATERIAL_OT_mlrestore(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
+class MATERIAL_OT_set_transparent_back_side(Operator):
     bl_idname = "material.set_transparent_back_side"
     bl_label = "Transparent back (BI)"
     bl_description = ("Creates BI nodes with Alpha output connected to"
@@ -1218,7 +1239,7 @@ class MATERIAL_OT_set_transparent_back_side(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MATERIAL_OT_move_slot_top(bpy.types.Operator):
+class MATERIAL_OT_move_slot_top(Operator):
     bl_idname = "material.move_material_slot_top"
     bl_label = "Slot to the top"
     bl_description = "Move the active material slot on top"
@@ -1248,7 +1269,7 @@ class MATERIAL_OT_move_slot_top(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MATERIAL_OT_move_slot_bottom(bpy.types.Operator):
+class MATERIAL_OT_move_slot_bottom(Operator):
     bl_idname = "material.move_material_slot_bottom"
     bl_label = "Slots to the bottom"
     bl_description = "Move the active material slot to the bottom"
@@ -1279,7 +1300,7 @@ class MATERIAL_OT_move_slot_bottom(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
+class MATERIAL_OT_link_to_base_names(Operator):
     bl_idname = "material.link_to_base_names"
     bl_label = "Merge Base Names"
     bl_description = ("Replace .001, .002 slots with Original \n"
@@ -1417,7 +1438,7 @@ class MATERIAL_OT_link_to_base_names(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MATERIAL_OT_check_converter_path(bpy.types.Operator):
+class MATERIAL_OT_check_converter_path(Operator):
     bl_idname = "material.check_converter_path"
     bl_label = "Check Converters images/data save path"
     bl_description = ("Checks if the given path is writeable \n"
@@ -1432,13 +1453,13 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
         sc = context.scene
         paths = bpy.path.abspath(sc.mat_specials.conv_path)
 
-        if os.path.exists(paths):
-            if os.access(paths, os.W_OK | os.X_OK):
+        if os_path.exists(paths):
+            if os_access(paths, os.W_OK | os.X_OK):
                 try:
-                    path_test = os.path.join(paths, "XYfoobartestXY.txt")
+                    path_test = os_path.join(paths, "XYfoobartestXY.txt")
                     with open(path_test, 'w') as f:
                         f.closed
-                    os.remove(path_test)
+                    os_remove(path_test)
                     return True
                 except (OSError, IOError):
                     warning_messages(self, 'DIR_PATH_W_ERROR')
@@ -1464,7 +1485,7 @@ class MATERIAL_OT_check_converter_path(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 # Menu classes #
 
-class VIEW3D_MT_assign_material(bpy.types.Menu):
+class VIEW3D_MT_assign_material(Menu):
     bl_label = "Assign Material"
 
     def draw(self, context):
@@ -1489,7 +1510,7 @@ class VIEW3D_MT_assign_material(bpy.types.Menu):
                         icon='ZOOMIN')
 
 
-class VIEW3D_MT_select_material(bpy.types.Menu):
+class VIEW3D_MT_select_material(Menu):
     bl_label = "Select by Material"
 
     def draw(self, context):
@@ -1522,7 +1543,7 @@ class VIEW3D_MT_select_material(bpy.types.Menu):
                                     icon='MATERIAL_DATA').matname = m
 
 
-class VIEW3D_MT_remove_material(bpy.types.Menu):
+class VIEW3D_MT_remove_material(Menu):
     bl_label = "Clean Slots"
 
     def draw(self, context):
@@ -1549,7 +1570,7 @@ class VIEW3D_MT_remove_material(bpy.types.Menu):
             layout.label(text="unvailable with Lux Renderer")
 
 
-class VIEW3D_MT_master_material(bpy.types.Menu):
+class VIEW3D_MT_master_material(Menu):
     bl_label = "Material Specials Menu"
 
     def draw(self, context):
@@ -1581,7 +1602,7 @@ class VIEW3D_MT_master_material(bpy.types.Menu):
         layout.menu("VIEW3D_MT_mat_special", icon="SOLO_ON")
 
 
-class VIEW3D_MT_mat_special(bpy.types.Menu):
+class VIEW3D_MT_mat_special(Menu):
     bl_label = "Specials"
 
     def draw(self, context):
@@ -1621,7 +1642,7 @@ class VIEW3D_MT_mat_special(bpy.types.Menu):
 
         layout.operator("material.link_to_base_names", icon="KEYTYPE_BREAKDOWN_VEC")
         use_separator(self, context)
-        layout.operator("object.rename",
+        layout.operator("texture.patern_rename",
                         text='Rename Image As Texture',
                         icon='TEXTURE')
 
@@ -1664,7 +1685,7 @@ def menu_move(self, context):
 
 # Converters Menu's #
 
-class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
+class MATERIAL_MT_scenemassive_opt(Menu):
     bl_idname = "scenemassive.opt"
     bl_description = "Additional Options for Convert BI to Cycles"
     bl_label = "Options"
@@ -1692,7 +1713,7 @@ class MATERIAL_MT_scenemassive_opt(bpy.types.Menu):
         layout.prop(sc.mat_specials, "img_bake_size", icon='NODE_SEL', expand=True)
 
 
-class MATERIAL_PT_scenemassive(bpy.types.Panel):
+class MATERIAL_PT_scenemassive(Panel):
     bl_label = "Convert BI Materials to Cycles"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
@@ -1733,7 +1754,7 @@ class MATERIAL_PT_scenemassive(bpy.types.Panel):
                        text="", icon="EXTERNAL_DATA")
 
 
-class MATERIAL_PT_xps_convert(bpy.types.Panel):
+class MATERIAL_PT_xps_convert(Panel):
     bl_label = "Convert to BI and Cycles Nodes"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
@@ -1768,7 +1789,7 @@ class MATERIAL_PT_xps_convert(bpy.types.Panel):
 
 # Converters Help #
 
-class MATERIAL_MT_biconv_help(bpy.types.Menu):
+class MATERIAL_MT_biconv_help(Menu):
     bl_idname = "help.biconvert"
     bl_description = "Read Instructions & Current Limitations"
     bl_label = "Usage Information Guide"
@@ -1798,7 +1819,7 @@ class MATERIAL_MT_biconv_help(bpy.types.Menu):
         layout.label(text="Convert Bi Materials to Cycles Nodes:", icon="INFO")
 
 
-class MATERIAL_MT_nodeconv_help(bpy.types.Menu):
+class MATERIAL_MT_nodeconv_help(Menu):
     bl_idname = "help.nodeconvert"
     bl_description = "Read Instructions & Current Limitations"
     bl_label = "Usage Information Guide"
@@ -1832,7 +1853,7 @@ class MATERIAL_MT_nodeconv_help(bpy.types.Menu):
 
 
 # Make Report #
-class material_converter_report(bpy.types.Operator):
+class material_converter_report(Operator):
     bl_idname = "mat_converter.reports"
     bl_label = "Material Converter Report"
     bl_description = "Report about done Material Conversions"
@@ -1861,8 +1882,8 @@ class material_converter_report(bpy.types.Operator):
 # -----------------------------------------------------------------------------
 # Scene Properties
 
-class material_specials_scene_props(bpy.types.PropertyGroup):
-    conv_path = bpy.props.StringProperty(
+class material_specials_scene_props(PropertyGroup):
+    conv_path = StringProperty(
             name="Save Directory",
             description=("Path to save images during conversion \n"
                          "Default is the location of the blend file"),
@@ -1870,13 +1891,16 @@ class material_specials_scene_props(bpy.types.PropertyGroup):
             subtype='DIR_PATH',
             )
     EXTRACT_ALPHA = BoolProperty(
-            attr="EXTRACT_ALPHA", default=False,
+            attr="EXTRACT_ALPHA",
+            default=False,
             )
     SET_FAKE_USER = BoolProperty(
-            attr="SET_FAKE_USER", default=False,
+            attr="SET_FAKE_USER",
+            default=False,
             )
     EXTRACT_PTEX = BoolProperty(
-            attr="EXTRACT_PTEX", default=False,
+            attr="EXTRACT_PTEX",
+            default=False,
             )
     EXTRACT_OW = BoolProperty(
             attr="Overwrite",
@@ -1896,10 +1920,10 @@ class material_specials_scene_props(bpy.types.PropertyGroup):
 # -----------------------------------------------------------------------------
 # Addon Preferences
 
-class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
+class VIEW3D_MT_material_utils_pref(AddonPreferences):
     bl_idname = __name__
 
-    show_warnings = bpy.props.BoolProperty(
+    show_warnings = BoolProperty(
             name="Enable Warning messages",
             default=False,
             description="Show warning messages \n"
@@ -1907,7 +1931,7 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
                         "Advisable if you don't know how the tool works",
             )
 
-    show_remove_mat = bpy.props.BoolProperty(
+    show_remove_mat = BoolProperty(
             name="Enable Remove all Materials",
             default=False,
             description="Enable Remove all Materials \n"
@@ -1916,7 +1940,7 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
                         "closing \ reloading Blender Set Fake User for them",
             )
 
-    show_mat_preview = bpy.props.BoolProperty(
+    show_mat_preview = BoolProperty(
             name="Enable Material Preview",
             default=True,
             description="Material Preview of the Active Object \n"
@@ -1925,7 +1949,7 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
                         "settings depending on the Context and Preferences",
             )
 
-    set_cleanmatslots = bpy.props.BoolProperty(
+    set_cleanmatslots = BoolProperty(
             name="Enable Auto Clean",
             default=True,
             description="Enable Automatic Removal of unused Material Slots \n"
@@ -1935,20 +1959,20 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
                         "performance impact on very dense meshes",
             )
 
-    show_separators = bpy.props.BoolProperty(
+    show_separators = BoolProperty(
             name="Use Separators in the menus",
             default=True,
             description="Use separators in the menus, a trade-off between \n"
                         "readability vs. using more space for displaying items",
             )
 
-    show_converters = bpy.props.BoolProperty(
+    show_converters = BoolProperty(
             name="Enable Converters",
             default=True,
             description=" \n  ",
             )
 
-    set_preview_size = bpy.props.EnumProperty(
+    set_preview_size = EnumProperty(
             name="Preview Menu Size",
             description="Set the preview menu size \n"
                         "depending on the number of materials \n"
@@ -1964,7 +1988,7 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
             default='3x3',
             )
 
-    set_preview_type = bpy.props.EnumProperty(
+    set_preview_type = EnumProperty(
             name="Preview Menu Type",
             description="Set the the Preview menu type \n",
             items=(('LIST', "Classic",
@@ -1978,7 +2002,7 @@ class VIEW3D_MT_material_utils_pref(bpy.types.AddonPreferences):
             default='PREVIEW',
             )
 
-    set_experimental_type = bpy.props.EnumProperty(
+    set_experimental_type = EnumProperty(
             name="Experimental Features",
             description=" \n",
             items=(('ALL', "All Converters",
@@ -2183,7 +2207,9 @@ def register():
     warning_messages_utils.MAT_SPEC_NAME = __name__
 
     # Register Scene Properties
-    bpy.types.Scene.mat_specials = bpy.props.PointerProperty(type=material_specials_scene_props)
+    bpy.types.Scene.mat_specials = bpy.props.PointerProperty(
+                                            type=material_specials_scene_props
+                                            )
 
     kc = bpy.context.window_manager.keyconfigs.addon
     if kc:

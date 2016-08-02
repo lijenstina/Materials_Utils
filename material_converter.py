@@ -3,18 +3,19 @@
 import bpy
 import mathutils
 from mathutils import Vector
-from .warning_messages_utils import (warning_messages,
-                                     c_is_cycles_addon_enabled,
-                                     c_data_has_materials)
+from bpy.types import Operator
+from .warning_messages_utils import (
+            warning_messages,
+            c_is_cycles_addon_enabled,
+            c_data_has_materials,
+            collect_report,
+            COLLECT_REPORT,
+            )
 
 # -----------------------------------------------------------------------------
 # Globals #
 
 nodesDictionary = None
-# collect report for the operator
-# string that has * as delimiters for splitting into new lines
-COLLECT_REPORT = []
-
 
 NODE_FRAME = 'NodeFrame'
 BI_MATERIAL_NODE = 'ShaderNodeMaterial'
@@ -40,22 +41,6 @@ textureNodeSizeY = 350
 
 # -----------------------------------------------------------------------------
 # Functions #
-
-def collect_report(collection="", is_final=False):
-    # collection passes a string for appending to COLLECT_REPORT global
-    # is_final swithes to the final report with the operator in __init__
-    global COLLECT_REPORT
-
-    if collection and type(collection) is str:
-        COLLECT_REPORT.append(collection)
-        print(collection)
-
-    if is_final:
-        # final operator pass uses * as delimiter for splitting into new lines
-        messages = "*".join(COLLECT_REPORT)
-        bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
-        COLLECT_REPORT = []
-
 
 def makeTextureNodeDict(cmat):
     global nodesDictionary
@@ -607,7 +592,6 @@ def hasAlphaTex(cmat):
 
 
 def AutoNode(active=False, operator=None):
-    global COLLECT_REPORT
     COLLECT_REPORT = []
 
     collect_report("________________________________________")
@@ -748,7 +732,7 @@ def makeCyclesFromBI(cmat):
 # -----------------------------------------------------------------------------
 # Operator Classes #
 
-class material_convert_all(bpy.types.Operator):
+class material_convert_all(Operator):
     bl_idname = "xps_tools.convert_to_cycles_all"
     bl_label = "Convert All Materials"
     bl_description = "Convert All Materials to BI and Cycles Nodes"
@@ -763,7 +747,7 @@ class material_convert_all(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class material_convert_selected(bpy.types.Operator):
+class material_convert_selected(Operator):
     bl_idname = "xps_tools.convert_to_cycles_selected"
     bl_label = "Convert All Materials From Selected Objects"
     bl_description = "Convert All Materials on Selected Objects to BI and Cycles Nodes"

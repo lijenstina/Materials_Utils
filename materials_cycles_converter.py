@@ -4,11 +4,16 @@
 
 import bpy
 import os
-from os import path
+from os import path as os_path
+from bpy.types import Operator
 from bpy.props import BoolProperty
-from .warning_messages_utils import (warning_messages,
-                                     c_is_cycles_addon_enabled,
-                                     c_data_has_materials)
+from .warning_messages_utils import (
+            warning_messages,
+            c_is_cycles_addon_enabled,
+            c_data_has_materials,
+            collect_report,
+            COLLECT_REPORT,
+            )
 
 # -----------------------------------------------------------------------------
 # Globals #
@@ -19,28 +24,8 @@ CHECK_AUTONODE = False
 # set the node color for baked textures (default greenish)
 NODE_COLOR = (0.32, 0.75, 0.32)
 
-# collect messages for the report operator
-COLLECT_REPORT = []
-
-
 # -----------------------------------------------------------------------------
 # Functions #
-
-
-def collect_report(collection="", is_final=False):
-    # collection passes a string for appending to COLLECT_REPORT global
-    # is_final swithes to the final report with the operator in __init__
-    global COLLECT_REPORT
-
-    if collection and type(collection) is str:
-        COLLECT_REPORT.append(collection)
-        print(collection)
-
-    if is_final:
-        # final operator pass uses * as delimiter for splitting into new lines
-        messages = "*".join(COLLECT_REPORT)
-        bpy.ops.mat_converter.reports('INVOKE_DEFAULT', message=messages)
-        COLLECT_REPORT = []
 
 
 def AutoNodeSwitch(switch="OFF", operator=None):
@@ -170,7 +155,8 @@ def AutoNodeInitiate(active=False, operator=None):
     # if CheckImagePath(operator):
     check_path = bpy.ops.material.check_converter_path()
     sc = bpy.context.scene
-    global COLLECT_REPORT, CHECK_AUTONODE
+
+    global CHECK_AUTONODE
 
     if 'FINISHED' in check_path:
         COLLECT_REPORT = []
@@ -369,7 +355,7 @@ def AutoNode(active=False, operator=None):
                         if tex.texture.type == 'IMAGE':
                             if sc.mat_specials.EXTRACT_ALPHA and tex.texture.use_alpha:
                                 if (not
-                                   os.path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.png")) or
+                                   os_path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.png")) or
                                    sc.mat_specials.EXTRACT_OW):
                                     baked_path = BakingText(tex, 'ALPHA')
                             try:
@@ -398,7 +384,7 @@ def AutoNode(active=False, operator=None):
                                                "(possibly missing)".format(tex.texture.name))
                         else:
                             if sc.mat_specials.EXTRACT_PTEX or (sc.mat_specials.EXTRACT_ALPHA and ma_alpha):
-                                if (not os.path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
+                                if (not os_path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
                                    sc.mat_specials.EXTRACT_OW):
                                     tex_type = tex.texture.type.lower()
                                     collect_report("Attempting to Extract Procedural Texture type: " + tex_type)
@@ -564,7 +550,7 @@ def AutoNode(active=False, operator=None):
 # -----------------------------------------------------------------------------
 # Operator Classes #
 
-class mllock(bpy.types.Operator):
+class mllock(Operator):
     bl_idname = "ml.lock"
     bl_label = "Lock"
     bl_description = "Lock/unlock this material against modification by conversions"
@@ -586,7 +572,7 @@ class mllock(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class mlrefresh(bpy.types.Operator):
+class mlrefresh(Operator):
     bl_idname = "ml.refresh"
     bl_label = "Convert All Materials"
     bl_description = "Convert All Materials in the scene from non-nodes to Cycles"
@@ -607,7 +593,7 @@ class mlrefresh(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class mlrefresh_active(bpy.types.Operator):
+class mlrefresh_active(Operator):
     bl_idname = "ml.refresh_active"
     bl_label = "Convert All Materials From Active Object"
     bl_description = "Convert all Active Object's Materials from non-nodes to Cycles"
@@ -627,7 +613,7 @@ class mlrefresh_active(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class mlrestore(bpy.types.Operator):
+class mlrestore(Operator):
     bl_idname = "ml.restore"
     bl_label = "Restore Blender Internal Materials"
     bl_description = "Switch to Blender Internal Render"

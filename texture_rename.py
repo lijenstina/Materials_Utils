@@ -2,12 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import bpy
+from bpy.types import (
+            Operator,
+            Panel,
+            )
 from bpy.props import StringProperty
 from .warning_messages_utils import warning_messages
 
 
-class SimpleOp(bpy.types.Operator):
-    bl_idname = "object.rename"
+class TEXTURE_OT_patern_rename(Operator):
+    bl_idname = "texture.patern_rename"
     bl_label = "Texture Renamer"
     bl_description = ("Replace the Texture names pattern with \n"
                       "the attached Image ones. \n"
@@ -18,8 +22,10 @@ class SimpleOp(bpy.types.Operator):
 
     def_name = "Texture"    # default name
     is_not_undo = False     # prevent drawing props on undo
-    named = StringProperty(name="Search for name",
-                           default=def_name)
+    named = StringProperty(
+                name="Search for name",
+                default=def_name
+                )
 
     @classmethod
     def poll(cls, context):
@@ -77,7 +83,7 @@ class SimpleOp(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class HWPl(bpy.types.Panel):
+class TEXTURE_PT_rename_panel(Panel):
     # Creates a Panel in the scene context of the properties editor
     bl_label = "Texture Rename"
     bl_idname = "SCENE_PT_layout"
@@ -87,7 +93,7 @@ class HWPl(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.operator("object.rename")
+        layout.operator("texture.patern_rename")
 
 
 def register():
