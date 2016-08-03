@@ -1,4 +1,4 @@
-# gpl: author Silvio Falcinelli. Fixes by others.
+# gpl: author Silvio Falcinelli. Fixes by angavrilov and others.
 # special thanks to user blenderartists.org cmomoney
 # -*- coding: utf-8 -*-
 
@@ -12,7 +12,6 @@ from .warning_messages_utils import (
             c_is_cycles_addon_enabled,
             c_data_has_materials,
             collect_report,
-            COLLECT_REPORT,
             )
 
 # -----------------------------------------------------------------------------
@@ -154,17 +153,17 @@ def AutoNodeInitiate(active=False, operator=None):
 
     # if CheckImagePath(operator):
     check_path = bpy.ops.material.check_converter_path()
-    sc = bpy.context.scene
 
     global CHECK_AUTONODE
 
     if 'FINISHED' in check_path:
-        COLLECT_REPORT = []
+        sc = bpy.context.scene
         CHECK_AUTONODE = True
+        collect_report("________________________________________", True, False)
         AutoNode(active, operator)
         if sc.mat_specials.SET_FAKE_USER:
             SetFakeUserTex()
-        collect_report("Conversion finished !", True)
+        collect_report("Conversion finished !", False, True)
     else:
         warning_messages(operator, 'DIR_PATH_CONVERT')
 
@@ -173,7 +172,9 @@ def AutoNode(active=False, operator=None):
     global CHECK_AUTONODE
     sc = bpy.context.scene
     if active:
-        mats = bpy.context.active_object.data.materials
+        # fix for empty slots by angavrilov
+        mats = [slot.material for slot in bpy.context.active_object.material_slots if
+                slot.material]
     else:
         mats = bpy.data.materials
 

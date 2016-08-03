@@ -19,7 +19,8 @@
 #           Materials Utils: by MichaleW, lijenstina,
 #                           (some code thanks to: CoDEmanX, SynaGl0w,
 #                                                 ideasman42)
-#           Materials Conversion: Silvio Falcinelli, johnzero7#, others
+#           Materials Conversion: Silvio Falcinelli, johnzero7#,
+#                                  fixes by angavrilov and others
 #           Link to base names: Sybren, Texture renamer: Yadoob
 
 bl_info = {
@@ -71,6 +72,12 @@ from .warning_messages_utils import (
             c_is_cycles_addon_enabled,
             c_data_has_materials,
             )
+
+# -----------------------------------------------------------------------------
+# Globals #
+
+# set the default name of the new added material
+MAT_DEFAULT_NAME = "New Material"
 
 
 # -----------------------------------------------------------------------------
@@ -141,9 +148,7 @@ def replace_material(m1, m2, all_objects=False, update_selection=False, operator
 
         for ob in objs:
             if ob.type == 'MESH':
-
                 match = False
-
                 for m in ob.material_slots:
                     if m.material == matorg:
                         m.material = matrep
@@ -322,12 +327,16 @@ def assignmatslots(ob, matlist):
         bpy.ops.object.material_slot_remove()
 
     # re-add them and assign material
-    i = 0
     if matlist:
         for m in matlist:
-            mat = bpy.data.materials[m]
-            ob.data.materials.append(mat)
-            i += 1
+            try:
+                mat = bpy.data.materials[m]
+                ob.data.materials.append(mat)
+            except:
+                # there is no material with that name in data
+                # or an empty mat is for some reason assigned
+                # to face indices, mat tries to get an '' as mat index
+                pass
 
     # restore active object:
     scn.objects.active = ob_active
@@ -358,13 +367,6 @@ def cleanmatslots(operator=None):
     for ob in objs:
         if ob.type == 'MESH':
             mats = ob.material_slots.keys()
-            mat_check = ob.material_slots
-
-            # remove empty materials first
-            for match in mat_check:
-                namee = getattr(match, "name", "")
-                if namee in (""):
-                    bpy.ops.object.material_slot_remove()
 
             # if mats is empty then mats[faceindex] will be out of range
             if mats:
@@ -918,7 +920,7 @@ class VIEW3D_OT_assign_material(Operator):
     matname = StringProperty(
             name="Material Name",
             description="Name of Material to Assign",
-            default="",
+            default=MAT_DEFAULT_NAME,
             maxlen=128,
             )
 
@@ -1525,7 +1527,7 @@ class VIEW3D_MT_select_material(Menu):
             # don't worry, i don't like the default cubes, lamps and cameras too
             layout.label(text="*No Objects to select*", icon="INFO")
         else:
-            # we did what we could, now you're at the mercy of Python
+            # we did what we could, now you're at the mercy of universe's entropy
             if ob.mode == 'OBJECT':
                 # show all used materials in entire blend file
                 for material_name, material in bpy.data.materials.items():

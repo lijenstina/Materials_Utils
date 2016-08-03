@@ -9,7 +9,6 @@ from .warning_messages_utils import (
             c_is_cycles_addon_enabled,
             c_data_has_materials,
             collect_report,
-            COLLECT_REPORT,
             )
 
 # -----------------------------------------------------------------------------
@@ -592,9 +591,7 @@ def hasAlphaTex(cmat):
 
 
 def AutoNode(active=False, operator=None):
-    COLLECT_REPORT = []
-
-    collect_report("________________________________________")
+    collect_report("________________________________________", True, False)
     collect_report("START CYCLES CONVERSION")
 
     if active:
@@ -624,7 +621,7 @@ def AutoNode(active=False, operator=None):
             makeBiNodes(cmat)
             makeCyclesFromBI(cmat)
 
-    collect_report("Conversion finished !", True)
+    collect_report("Conversion finished !", False, True)
 
     bpy.context.scene.render.engine = 'CYCLES'
 

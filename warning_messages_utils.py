@@ -38,6 +38,10 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
     # pass the show_warnings bool to enable/disable them
     addon = bpy.context.user_preferences.addons[MAT_SPEC_NAME]
     show_warn = (addon.preferences.show_warnings if addon else False)
+
+    # print the whole list in the console if abbrevated
+    obj_size_big = False
+
     if show_warn and operator:
         if object_name:
             if type(object_name) is list:
@@ -49,6 +53,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
                     obj_name = "{}{}".format(obj_name, gramma_p)
                 elif (obj_size > MAX_COUNT):
                     abbrevation = ("(Multiple)" if is_mat else "(Multiple Objects)")
+                    obj_size_big = True
                     obj_name = "{}{}".format(abbrevation, gramma_p)
                 elif (obj_size == 1):
                     obj_name = "{}{}".format(obj_name, gramma_s)
@@ -56,7 +61,6 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
                 obj_name = "{}{}".format(object_name, gramma_s)
 
         message = {
-            'EMPTY': "".join(fake),
             'DEFAULT': "No editable selected objects, could not finish",
             'RMV_EDIT': "{}{}".format(obj_name, "Unable to remove material slot in edit mode)"),
             'A_OB_MIX_NO_MAT': "{}{}".format(obj_name, "No Material applied. Object type can't have materials"),
@@ -110,11 +114,19 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
 
         operator.report({'INFO'}, message[warn])
 
+        if obj_size_big is True:
+            print("\n** MATERIAL SPECIALS **: \n Full list for the Info message is: \n",
+                  ", ".join(object_name), "\n")
 
-def collect_report(collection="", is_final=False):
+
+def collect_report(collection="", is_start=False, is_final=False):
     # collection passes a string for appending to COLLECT_REPORT global
     # is_final swithes to the final report with the operator in __init__
     global COLLECT_REPORT
+
+    if is_start:
+        # there was a crash somewhere before the is_final call
+        COLLECT_REPORT = []
 
     if collection and type(collection) is str:
         COLLECT_REPORT.append(collection)
