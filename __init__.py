@@ -742,15 +742,6 @@ def remove_materials_all(operator=None):
             warning_messages(operator, 'R_OB_FAIL_MAT', collect_mess)
 
 
-def cycles_node_on(operator=None):
-    mats = bpy.data.materials
-    for cmat in mats:
-        cmat.use_nodes = True
-    bpy.context.scene.render.engine = 'CYCLES'
-    if operator:
-        warning_messages(operator, 'CYC_SW_NODES_ON')
-
-
 # -----------------------------------------------------------------------------
 # Operator Classes #
 
@@ -1171,21 +1162,6 @@ class VIEW3D_OT_fake_user_set(Operator):
 
     def execute(self, context):
         fake_user_set(self.fake_user, self.materials, self)
-        return {'FINISHED'}
-
-
-class MATERIAL_OT_mlrestore(Operator):
-    bl_idname = "cycles.restore"
-    bl_label = "Restore Cycles"
-    bl_description = "Switch Back to Cycles Nodes"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return c_is_cycles_addon_enabled()
-
-    def execute(self, context):
-        cycles_node_on(self)
         return {'FINISHED'}
 
 
@@ -1612,12 +1588,19 @@ class VIEW3D_MT_mat_special(Menu):
 
         if c_render_engine("Cycles"):
             if (enable_converters() is True and converter_type('BI_CONV')):
-                layout.operator("ml.restore",
-                                text='BI Nodes Off', icon="BLENDER").switcher = False
-                layout.operator("ml.restore",
-                                text='BI Nodes On',
-                                icon="APPEND_BLEND").switcher = True
+                ml_restore_1 = layout.operator("ml.restore",
+                                               text='To BI Nodes Off',
+                                               icon="BLENDER")
+                ml_restore_1.switcher = False
+                ml_restore_1.renderer = "BI"
+
+                ml_restore_2 = layout.operator("ml.restore",
+                                               text='To BI Nodes On',
+                                               icon="APPEND_BLEND")
+                ml_restore_2.switcher = True
+                ml_restore_2.renderer = "BI"
                 use_separator(self, context)
+
         elif c_render_engine("BI"):
             if (enable_converters() is True and converter_type('CYC_CONV')):
                 layout.operator("ml.refresh_active",
@@ -1626,9 +1609,18 @@ class VIEW3D_MT_mat_special(Menu):
                 layout.operator("ml.refresh",
                                 text='Convert All to Cycles',
                                 icon='NODE_INSERT_ON')
-                layout.operator("cycles.restore",
-                                text='Back to Cycles Nodes',
-                                icon='NODETREE')
+                use_separator(self, context)
+                ml_restore_1 = layout.operator("ml.restore",
+                                               text='To Cycles Nodes Off',
+                                               icon="SOLID")
+                ml_restore_1.switcher = False
+                ml_restore_1.renderer = "CYCLES"
+
+                ml_restore_2 = layout.operator("ml.restore",
+                                               text='To Cycles Nodes On',
+                                               icon="IMGDISPLAY")
+                ml_restore_2.switcher = True
+                ml_restore_2.renderer = "CYCLES"
                 use_separator(self, context)
 
             layout.operator("material.set_transparent_back_side",
@@ -1738,8 +1730,11 @@ class MATERIAL_PT_scenemassive(Panel):
         split.operator("ml.refresh_active",
                        text="Convert Active to Cycles", icon='MATERIAL')
         box = box.box()
-        box.operator("ml.restore",
-                     text="To BI Nodes Off", icon='MATERIAL').switcher = False
+        ml_restore = box.operator("ml.restore",
+                                  text="To BI Nodes Off",
+                                  icon='MATERIAL')
+        ml_restore.switcher = False
+        ml_restore.renderer = "BI"
 
         row = layout.row()
         box = row.box()
@@ -1782,8 +1777,12 @@ class MATERIAL_PT_xps_convert(Panel):
         col = layout.column()
         row = col.row()
         box = row.box()
-        box.operator("ml.restore",
-                     text="To BI Nodes On", icon="TEXTURE").switcher = True
+        ml_restore = box.operator("ml.restore",
+                                  text="To BI Nodes ON",
+                                  icon='MATERIAL')
+        ml_restore.switcher = True
+        ml_restore.renderer = "BI"
+
         box = row.box()
         box.menu("help.nodeconvert",
                  text="Usage Information Guide", icon="MOD_EXPLODE")

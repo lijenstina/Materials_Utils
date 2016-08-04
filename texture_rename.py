@@ -7,7 +7,10 @@ from bpy.types import (
             Panel,
             )
 from bpy.props import StringProperty
-from .warning_messages_utils import warning_messages
+from .warning_messages_utils import (
+            warning_messages,
+            c_data_has_images,
+            )
 
 
 class TEXTURE_OT_patern_rename(Operator):
@@ -29,7 +32,7 @@ class TEXTURE_OT_patern_rename(Operator):
 
     @classmethod
     def poll(cls, context):
-        return (len(bpy.data.images) > 0)
+        return c_data_has_images()
 
     def draw(self, context):
         layout = self.layout

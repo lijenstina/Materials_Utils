@@ -23,26 +23,27 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
     # is_mat a switch to change to materials or textures for obj_name('MAT','TEX', 'FILE', None)
     # fake - optional string that can be passed
     # MAX_COUNT - max members of an list to be displayed
-    obj_name = ""
-    MAX_COUNT = 6
-    gramma_s, gramma_p = " - has ", " - have "
-
-    if is_mat:
-        if is_mat in {'MAT'}:
-            gramma_s, gramma_p = " - Material has ", " - Materials have "
-        elif is_mat in {'TEX'}:
-            gramma_s, gramma_p = " - Texture has ", " - Textures have "
-        elif is_mat in {'FILE'}:
-            gramma_s, gramma_p = " - File ", " - Files "
 
     # pass the show_warnings bool to enable/disable them
     addon = bpy.context.user_preferences.addons[MAT_SPEC_NAME]
     show_warn = (addon.preferences.show_warnings if addon else False)
 
-    # print the whole list in the console if abbrevated
-    obj_size_big = False
-
     if show_warn and operator:
+        obj_name = ""
+        MAX_COUNT = 6
+        gramma_s, gramma_p = " - has ", " - have "
+
+        if is_mat:
+            if is_mat in ('MAT'):
+                gramma_s, gramma_p = " - Material has ", " - Materials have "
+            elif is_mat in ('TEX'):
+                gramma_s, gramma_p = " - Texture has ", " - Textures have "
+            elif is_mat in ('FILE'):
+                gramma_s, gramma_p = " - File ", " - Files "
+
+        # print the whole list in the console if abbreviated
+        obj_size_big = False
+
         if object_name:
             if type(object_name) is list:
                 obj_name = ", ".join(object_name)
@@ -62,6 +63,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
 
         message = {
             'DEFAULT': "No editable selected objects, could not finish",
+            'PLACEHOLDER': "{}{}".format(warn, " - Message key is not present in the warning_message_utils"),
             'RMV_EDIT': "{}{}".format(obj_name, "Unable to remove material slot in edit mode)"),
             'A_OB_MIX_NO_MAT': "{}{}".format(obj_name, "No Material applied. Object type can't have materials"),
             'A_MAT_NAME_EDIT': "{}{}".format(obj_name, " been applied to selection"),
@@ -94,6 +96,7 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'BI_SW_NODES_OFF': "Switching to Blender Render, Use Nodes disabled",
             'BI_SW_NODES_ON': "Switching to Blender Render, Use Nodes enabled",
             'CYC_SW_NODES_ON': "Switching back to Cycles, Use Nodes enabled",
+            'CYC_SW_NODES_OFF': "Switching back to Cycles, Use Nodes disabled",
             'TEX_RENAME_F': "{}{}".format(obj_name, "no Images assigned, skipping"),
             'NO_TEX_RENAME': "No Textures in Data, nothing to rename",
             'DIR_PATH_W_ERROR': "ERROR: Directory without writing privileges",
@@ -111,6 +114,9 @@ def warning_messages(operator=None, warn='DEFAULT', object_name="", is_mat=None,
             'CONV_NO_SC_MAT': "No Materials in the Scene. Nothing to convert",
             'CONV_NO_SEL_MAT': "No Materials on Selected Objects. Nothing to convert",
             }
+
+        # doh! did we passed an non existing dict key
+        warn = (warn if warn in message else 'PLACEHOLDER')
 
         operator.report({'INFO'}, message[warn])
 
@@ -151,6 +157,11 @@ def c_is_cycles_addon_enabled():
 def c_data_has_materials():
     # check for material presence in data
     return (len(bpy.data.materials) > 0)
+
+
+def c_data_has_images():
+    # check for image presence in data
+    return (len(bpy.data.images) > 0)
 
 
 def register():

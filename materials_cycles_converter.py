@@ -6,7 +6,10 @@ import bpy
 import os
 from os import path as os_path
 from bpy.types import Operator
-from bpy.props import BoolProperty
+from bpy.props import (
+            BoolProperty,
+            EnumProperty,
+            )
 from .warning_messages_utils import (
             warning_messages,
             c_is_cycles_addon_enabled,
@@ -27,15 +30,21 @@ NODE_COLOR = (0.32, 0.75, 0.32)
 # Functions #
 
 
-def AutoNodeSwitch(switch="OFF", operator=None):
+def AutoNodeSwitch(renderer="CYCLES", switch="OFF", operator=None):
     mats = bpy.data.materials
     use_nodes = (True if switch in ("ON") else False)
-    warn_message = ('BI_SW_NODES_ON' if switch in ("ON") else 'BI_SW_NODES_OFF')
+    warn_message = ('BI_SW_NODES_ON' if switch in ("ON") else
+                    'BI_SW_NODES_OFF')
+    warn_message_2 = ('CYC_SW_NODES_ON' if switch in ("ON") else
+                      'CYC_SW_NODES_OFF')
     for cmat in mats:
         cmat.use_nodes = use_nodes
-    bpy.context.scene.render.engine = 'BLENDER_RENDER'
+    renders = ('CYCLES' if renderer and renderer == "CYCLES" else
+               'BLENDER_RENDER')
+    bpy.context.scene.render.engine = renders
     if operator:
-        warning_messages(operator, warn_message)
+        warning_messages(operator, (warn_message_2 if renders in ('CYCLES') else
+                                    warn_message))
 
 
 def SetFakeUserTex():
@@ -68,7 +77,8 @@ def BakingText(tex, mode, tex_type=None):
     tm = bpy.context.active_object
     tm.name = "TMP_BAKING"
     tm.data.name = "TMP_BAKING"
-    bpy.ops.object.select_pattern(extend=False, pattern="TMP_BAKING", case_sensitive=False)
+    bpy.ops.object.select_pattern(extend=False, pattern="TMP_BAKING",
+                                  case_sensitive=False)
     sc.objects.active = tm
     bpy.context.scene.render.engine = 'BLENDER_RENDER'
     tm.data.materials.append(tmat)
@@ -96,7 +106,8 @@ def BakingText(tex, mode, tex_type=None):
         sizeX = tex.texture.image.size[0]
         sizeY = tex.texture.image.size[1]
     else:
-        bake_size = (int(sc.mat_specials.img_bake_size) if sc.mat_specials.img_bake_size else 1024)
+        bake_size = (int(sc.mat_specials.img_bake_size) if
+                     sc.mat_specials.img_bake_size else 1024)
         sizeX = bake_size
         sizeY = bake_size
 
@@ -129,8 +140,17 @@ def BakingText(tex, mode, tex_type=None):
     sc.render.bake_type = 'ALPHA'
     sc.render.use_bake_selected_to_active = True
     sc.render.use_bake_clear = True
-    bpy.ops.object.bake_image()
-    img.save()
+
+    # try to bake if it fails give report
+    try:
+        bpy.ops.object.bake_image()
+        img.save()
+    except:
+        # no return value so the image loading is skipped
+        saved_img_path = None
+        collect_report("ERROR: Baking could not be completed. "
+                       "Check System Console for info")
+
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.delete()
     bpy.ops.object.select_pattern(extend=False, pattern=Robj.name, case_sensitive=False)
@@ -359,30 +379,30 @@ def AutoNode(active=False, operator=None):
                                    os_path.exists(bpy.path.abspath(tex.texture.image.filepath + "_BAKING.png")) or
                                    sc.mat_specials.EXTRACT_OW):
                                     baked_path = BakingText(tex, 'ALPHA')
-                            try:
-                                if baked_path:
-                                    img = bpy.data.images.load(baked_path)
-                                    collect_report("INFO: Loading Baked texture path:")
-                                    collect_report(baked_path)
-                                else:
-                                    img = tex.texture.image
+                                try:
+                                    if baked_path:
+                                        img = bpy.data.images.load(baked_path)
+                                        collect_report("INFO: Loading Baked texture path:")
+                                        collect_report(baked_path)
+                                    else:
+                                        img = tex.texture.image
 
-                                img_name = (img.name if hasattr(img, "name") else "NO NAME")
-                                shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
-                                shtext.location = tex_node_loc
-                                shtext.image = img
-                                shtext.name = img_name
-                                shtext.label = "Image " + img_name
-                                if baked_path:
-                                    shtext.use_custom_color = True
-                                    shtext.color = NODE_COLOR
-                                collect_report("INFO: Creating Image Node for image: " + img_name)
-                                if node_frame:
-                                    shtext.parent = node_frame
-                                sT = True
-                            except:
-                                collect_report("ERROR: A problem occured with loading an image for {} "
-                                               "(possibly missing)".format(tex.texture.name))
+                                    img_name = (img.name if hasattr(img, "name") else "NO NAME")
+                                    shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
+                                    shtext.location = tex_node_loc
+                                    shtext.image = img
+                                    shtext.name = img_name
+                                    shtext.label = "Image " + img_name
+                                    if baked_path:
+                                        shtext.use_custom_color = True
+                                        shtext.color = NODE_COLOR
+                                    collect_report("INFO: Creating Image Node for image: " + img_name)
+                                    if node_frame:
+                                        shtext.parent = node_frame
+                                    sT = True
+                                except:
+                                    collect_report("ERROR: A problem occured with loading an image for {} "
+                                                   "(possibly missing)".format(tex.texture.name))
                         else:
                             if sc.mat_specials.EXTRACT_PTEX or (sc.mat_specials.EXTRACT_ALPHA and ma_alpha):
                                 if (not os_path.exists(bpy.path.abspath(tex.texture.name + "_PTEXT.jpg")) or
@@ -390,24 +410,28 @@ def AutoNode(active=False, operator=None):
                                     tex_type = tex.texture.type.lower()
                                     collect_report("Attempting to Extract Procedural Texture type: " + tex_type)
                                     baked_path = BakingText(tex, 'PTEX', tex_type)
-                                try:
-                                    img = bpy.data.images.load(baked_path)
-                                    collect_report("Loading Baked texture path:")
-                                    collect_report(baked_path)
-                                    img_name = (img.name if hasattr(img, "name") else "NO NAME")
-                                    shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
-                                    shtext.location = tex_node_loc
-                                    shtext.image = img
-                                    shtext.name = img_name
-                                    shtext.label = "Baked Image " + img_name
-                                    shtext.use_custom_color = True
-                                    shtext.color = NODE_COLOR
-                                    collect_report("Creating Image Node for baked image: " + img_name)
-                                    if node_frame:
-                                        shtext.parent = node_frame
-                                    sT = True
-                                except:
-                                    collect_report("ERROR: Failure to load baked image: " + img_name)
+
+                                if baked_path:
+                                    try:
+                                        img = bpy.data.images.load(baked_path)
+                                        collect_report("Loading Baked texture path:")
+                                        collect_report(baked_path)
+                                        img_name = (img.name if hasattr(img, "name") else "NO NAME")
+                                        shtext = TreeNodes.nodes.new('ShaderNodeTexImage')
+                                        shtext.location = tex_node_loc
+                                        shtext.image = img
+                                        shtext.name = img_name
+                                        shtext.label = "Baked Image " + img_name
+                                        shtext.use_custom_color = True
+                                        shtext.color = NODE_COLOR
+                                        collect_report("Creating Image Node for baked image: " + img_name)
+                                        if node_frame:
+                                            shtext.parent = node_frame
+                                        sT = True
+                                    except:
+                                        collect_report("ERROR: Failure to load baked image: " + img_name)
+                                else:
+                                    collect_report("ERROR: Failure during baking, no images loaded")
 
                     if cmat_is_transp and cmat.raytrace_transparency.ior == 1 and not cmat.raytrace_mirror.use and sM:
                         if not shader.type == 'ShaderNodeBsdfTransparent':
@@ -616,8 +640,9 @@ class mlrefresh_active(Operator):
 
 class mlrestore(Operator):
     bl_idname = "ml.restore"
-    bl_label = "Restore Blender Internal Materials"
-    bl_description = "Switch to Blender Internal Render"
+    bl_label = "Switch Between Renderers"
+    bl_description = ("Switch between Renderers \n"
+                      "(Doesn't create new nor converts existing materials)")
     bl_options = {'REGISTER', 'UNDO'}
 
     switcher = BoolProperty(
@@ -625,17 +650,23 @@ class mlrestore(Operator):
             description="When restoring, switch Use Nodes On/Off",
             default=True
             )
+    renderer = EnumProperty(
+            name="Renderer",
+            description="Choose Cycles or Blender Internal",
+            items=(('CYCLES', "Cycles", "Switch to Cycles"),
+                   ('BI', "Blender Internal", "Switch to Blender Internal")),
+            default='CYCLES',
+            )
 
     @classmethod
     def poll(cls, context):
-        # well, i'll think of something later on :)
-        return True
+        return c_is_cycles_addon_enabled()
 
     def execute(self, context):
         if self.switcher:
-            AutoNodeSwitch("ON", self)
+            AutoNodeSwitch(self.renderer, "ON", self)
         else:
-            AutoNodeSwitch("OFF", self)
+            AutoNodeSwitch(self.renderer, "OFF", self)
         return {'FINISHED'}
 
 
