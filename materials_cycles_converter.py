@@ -61,6 +61,7 @@ def SetFakeUserTex():
 def BakingText(tex, mode, tex_type=None):
     collect_report("INFO: start bake texture named: " + tex.name)
     saved_img_path = None
+
     bpy.ops.object.mode_set(mode='OBJECT')
     sc = bpy.context.scene
     tmat = ''
@@ -113,43 +114,64 @@ def BakingText(tex, mode, tex_type=None):
 
     bpy.ops.image.new(name="TMP_BAKING", width=sizeX, height=sizeY,
                       color=(0.0, 0.0, 0.0, 1.0), alpha=True, float=False)
-    bpy.data.screens['UV Editing'].areas[1].spaces[0].image = bpy.data.images["TMP_BAKING"]
+
     sc.render.engine = 'BLENDER_RENDER'
     img = bpy.data.images["TMP_BAKING"]
     img = bpy.data.images.get("TMP_BAKING")
     img.file_format = ("JPEG" if not mode == "ALPHA" else "PNG")
 
-    paths = bpy.path.abspath(sc.mat_specials.conv_path)
-    tex_name = getattr(getattr(tex.texture, "image", None), "name", None)
-    texture_name = (tex_name.rpartition(".")[0] if tex_name else tex.texture.name)
-    new_tex_name = "baked"
-    name_append = ("_BAKING" if mode == "ALPHA" and
-                   tex.texture.type == 'IMAGE' else "_PTEXT")
-    new_appendix = (".jpg" if not mode == "ALPHA" else ".png")
+    # workaround for custom screen layouts
+    store_area = None
+    check_area = False
 
-    if name_append in texture_name:
-        new_tex_name = texture_name
-    elif tex_type:
-        new_tex_name = tex_type + name_append
+    if 'UV Editing' in bpy.data.screens:
+        bpy.data.screens['UV Editing'].areas[1].spaces[0].image = bpy.data.images["TMP_BAKING"]
+        check_area = True
     else:
-        new_tex_name = texture_name + name_append
+        collect_report("WARNING: No UV Editing screen layout found. Trying a workaround")
+        # switch temporarly to 'IMAGE EDITOR'
+        store_area = bpy.context.area.type
+        try:
+            bpy.context.area.type = 'IMAGE_EDITOR'
+            bpy.context.area.spaces[0].image = bpy.data.images["TMP_BAKING"]
+            check_area = True
+        except:
+            collect_report("ERROR: Setting to Image Editor type workaround failed")
+            check_area = False
+    if check_area:
+        paths = bpy.path.abspath(sc.mat_specials.conv_path)
+        tex_name = getattr(getattr(tex.texture, "image", None), "name", None)
+        texture_name = (tex_name.rpartition(".")[0] if tex_name else tex.texture.name)
+        new_tex_name = "baked"
+        name_append = ("_BAKING" if mode == "ALPHA" and
+                       tex.texture.type == 'IMAGE' else "_PTEXT")
+        new_appendix = (".jpg" if not mode == "ALPHA" else ".png")
 
-    img.filepath_raw = paths + new_tex_name + new_appendix
-    saved_img_path = img.filepath_raw
+        if name_append in texture_name:
+            new_tex_name = texture_name
+        elif tex_type:
+            new_tex_name = tex_type + name_append
+        else:
+            new_tex_name = texture_name + name_append
 
-    sc.render.bake_type = 'ALPHA'
-    sc.render.use_bake_selected_to_active = True
-    sc.render.use_bake_clear = True
+        img.filepath_raw = paths + new_tex_name + new_appendix
+        saved_img_path = img.filepath_raw
 
-    # try to bake if it fails give report
-    try:
-        bpy.ops.object.bake_image()
-        img.save()
-    except:
-        # no return value so the image loading is skipped
-        saved_img_path = None
-        collect_report("ERROR: Baking could not be completed. "
-                       "Check System Console for info")
+        sc.render.bake_type = 'ALPHA'
+        sc.render.use_bake_selected_to_active = True
+        sc.render.use_bake_clear = True
+
+        # try to bake if it fails give report
+        try:
+            bpy.ops.object.bake_image()
+            img.save()
+        except:
+            # no return value, so the image loading is skipped
+            saved_img_path = None
+            collect_report("ERROR: Baking could not be completed. "
+                           "Check System Console for info")
+    if store_area:
+        bpy.context.area.type = store_area
 
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.delete()
@@ -162,7 +184,7 @@ def BakingText(tex, mode, tex_type=None):
         bpy.data.materials.remove(tmat)
 
     if saved_img_path:
-        collect_report("________________________________________")
+        collect_report("------- Baking finished -------")
         return saved_img_path
 
 

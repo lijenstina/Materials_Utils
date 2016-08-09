@@ -24,17 +24,17 @@
 #           Link to base names: Sybren, Texture renamer: Yadoob
 
 bl_info = {
-    "name": "Materials Specials",
+    "name": "Materials Utils Specials",
     "author": "Community",
-    "version": (0, 3, 0),
-    "blender": (2, 75, 0),
-    "location": "Materials Specials Menu/Shift Q",
-    "description": "Extended Specials: Materials Properties",
+    "version": (1, 0, 0),
+    "blender": (2, 77, 0),
+    "location": "Materials Properties Specials/Shift Q",
+    "description": "Materials Utils & Convertors",
     "warning": "",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6"
-    "/Py/Scripts",
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/3D_interaction/Materials_Utils",
     "tracker_url": "",
-    "category": "Material"}
+    "category": "Material"
+    }
 
 if "bpy" in locals():
     import importlib
@@ -1798,6 +1798,7 @@ class MATERIAL_MT_biconv_help(Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.label(text="If possible, avoid multiple conversions in a row")
         layout.label(text="Save Your Work Often", icon="ERROR")
         use_separator(self, context)
         layout.label(text="Select the texture loaded in the image node")
@@ -1806,6 +1807,7 @@ class MATERIAL_MT_biconv_help(Menu):
         layout.label(text="Enable Node Wrangler addon", icon="NODETREE")
         layout.label(text="If Unconnected or No Image Node Error:", icon="MOD_EXPLODE")
         use_separator(self, context)
+        layout.label(text="Extract Alpha: the images have to have alpha channel")
         layout.label(text="The default path is the folder where the current .blend is")
         layout.label(text="During Baking, the script will check writting privileges")
         layout.label(text="Set the save path for extracting images with full access")
@@ -1828,6 +1830,7 @@ class MATERIAL_MT_nodeconv_help(Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.label(text="If possible, avoid multiple conversions in a row")
         layout.label(text="Save Your Work Often", icon="ERROR")
         use_separator(self, context)
         layout.label(text="Relinking and removing some not needed nodes")
@@ -1839,6 +1842,7 @@ class MATERIAL_MT_nodeconv_help(Menu):
         layout.label(text="Enable Node Wrangler addon", icon="NODETREE")
         layout.label(text="If Unconnected or No Image Node Error:", icon="MOD_EXPLODE")
         use_separator(self, context)
+        layout.label(text="For Specular Nodes, Image color influence has to be enabled")
         layout.label(text="Generated images (i.e. Noise and others) are not converted")
         layout.label(text="The Converter report can point out to some failures")
         layout.label(text="Not all Files will produce good results", icon="ERROR")
@@ -1894,14 +1898,18 @@ class material_specials_scene_props(PropertyGroup):
     EXTRACT_ALPHA = BoolProperty(
             attr="EXTRACT_ALPHA",
             default=False,
+            description=("Extract Alpha channel from non-procedural images \n"
+                         "Don't use this option if the image doesn't have Alpha"),
             )
     SET_FAKE_USER = BoolProperty(
             attr="SET_FAKE_USER",
             default=False,
+            description="Set fake user on unused images, so they can be kept in the .blend",
             )
     EXTRACT_PTEX = BoolProperty(
             attr="EXTRACT_PTEX",
             default=False,
+            description="Extract procedural images and bake them to jpeg",
             )
     EXTRACT_OW = BoolProperty(
             attr="Overwrite",
@@ -1970,7 +1978,7 @@ class VIEW3D_MT_material_utils_pref(AddonPreferences):
     show_converters = BoolProperty(
             name="Enable Converters",
             default=True,
-            description=" \n  ",
+            description="Enable Material Converters",
             )
 
     set_preview_size = EnumProperty(
