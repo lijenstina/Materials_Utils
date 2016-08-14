@@ -1699,6 +1699,10 @@ class MATERIAL_MT_scenemassive_opt(Menu):
         use_separator(self, context)
         layout.prop(sc.mat_specials, "SET_FAKE_USER", text="Set Fake User on unused images")
         use_separator(self, context)
+        layout.prop(sc.mat_specials, "SCULPT_PAINT", text="Sculpt/Texture paint mode")
+        use_separator(self, context)
+        layout.prop(sc.mat_specials, "UV_UNWRAP", text="Set Auto UV Unwrap (Active Object)")
+        use_separator(self, context)
 
         layout.label("Set the Bake Resolution")
         res = str(sc.mat_specials.img_bake_size)
@@ -1800,6 +1804,10 @@ class MATERIAL_MT_biconv_help(Menu):
         layout = self.layout
         layout.label(text="If possible, avoid multiple conversions in a row")
         layout.label(text="Save Your Work Often", icon="ERROR")
+        use_separator(self, context)
+        layout.label(text="Try to link them manually using Mix Color nodes")
+        layout.label(text="Only the last Image in the stack gets linked to Shader")
+        layout.label(text="Current limitation:", icon="MOD_EXPLODE")
         use_separator(self, context)
         layout.label(text="Select the texture loaded in the image node")
         layout.label(text="Press Ctrl/T to create the image nodes")
@@ -1915,6 +1923,18 @@ class material_specials_scene_props(PropertyGroup):
             attr="Overwrite",
             default=False,
             description="Extract textures again instead of re-using priorly extracted textures",
+            )
+    SCULPT_PAINT = BoolProperty(
+            attr="SCULPT_PAINT",
+            default=False,
+            description=("Conversion geared towards sculpting and painting.\n"
+                         "Creates a diffuse, glossy mixed with layer weight. \n"
+                         "Image nodes are not connected"),
+            )
+    UV_UNWRAP = BoolProperty(
+            attr="UV_UNWRAP",
+            default=False,
+            description=("Use automatical Angle based UV Unwrap of the active Object"),
             )
     img_bake_size = EnumProperty(
             name="Bake Image Size",
