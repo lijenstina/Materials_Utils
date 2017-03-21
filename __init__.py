@@ -1013,8 +1013,8 @@ class VIEW3D_OT_material_remove_slot(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
-    # materials can't be removed in Edit mode
     def poll(cls, context):
+        # materials can't be removed in Edit mode
         return (c_data_has_materials() and
                 context.active_object is not None and
                 not context.object.mode == 'EDIT')
@@ -1036,8 +1036,8 @@ class VIEW3D_OT_material_remove_object(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
-    # materials can't be removed in Edit mode
     def poll(cls, context):
+        # materials can't be removed in Edit mode
         return (c_data_has_materials() and
                 context.active_object is not None and
                 not context.object.mode == 'EDIT')
