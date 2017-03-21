@@ -2054,7 +2054,7 @@ class VIEW3D_MT_material_utils_pref(AddonPreferences):
             )
     set_preview_type = EnumProperty(
             name="Preview Menu Type",
-            description="Set the the Preview menu type \n",
+            description="Set the the Preview menu type",
             items=(('LIST', "Classic",
                     "Display as a Classic List like in Blender Propreties. \n \n"
                     "Preview of Active Material not available"),
@@ -2067,7 +2067,7 @@ class VIEW3D_MT_material_utils_pref(AddonPreferences):
             )
     set_experimental_type = EnumProperty(
             name="Experimental Features",
-            description=" \n",
+            description="Set the Type of converters enabled",
             items=(('ALL', "All Converters",
                     "Enable all Converters"),
                    ('CYC_CONV', "BI and Cycles Nodes",
@@ -2090,35 +2090,32 @@ class VIEW3D_MT_material_utils_pref(AddonPreferences):
 
         box = layout.box()
         split = box.split(align=True)
-        col = split.column()
 
+        col = split.column()
         col.prop(self, "show_warnings")
+        col.prop(self, "show_remove_mat")
+
         col = split.column()
         col.alignment = 'RIGHT'
         col.prop(self, "set_cleanmatslots")
         col.prop(self, "show_separators")
-        col = split.column()
-        col.prop(self, "show_remove_mat")
 
         boxie = box.box()
         row = boxie.row()
         row.prop(self, "show_mat_preview")
-        rowsy = row.split()
+        rowsy = row.split(align=True)
         rowsy.enabled = True if self.show_mat_preview else False
-        rowsy.alignment = 'CENTER'
-        rowsy.prop(self, "set_preview_type", text="")
-        rowsa = rowsy.row()
+        rowsy.prop(self, "set_preview_type", expand=True)
+        rowsa = boxie.row(align=True)
         rowsa.enabled = True if self.set_preview_type in {'PREVIEW'} else False
-        rowsa.alignment = 'CENTER'
-        rowsa.prop(self, "set_preview_size", text="")
+        rowsa.prop(self, "set_preview_size", expand=True)
 
         boxif = box.box()
         rowf = boxif.row()
         rowf.prop(self, "show_converters")
         rowsf = rowf.split()
         rowsf.enabled = True if self.show_converters else False
-        rowsf.alignment = 'RIGHT'
-        rowsf.prop(self, "set_experimental_type", text="")
+        rowsf.prop(self, "set_experimental_type", expand=True)
 
 
 # utility functions:
